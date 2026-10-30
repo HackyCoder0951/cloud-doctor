@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cloud-doctor.local/schemas/audit_event.json",
+  "title": "Audit event (append-only, hash-chained)",
+  "description": "hash = sha256 over canonical JSON of {seq, incident_id, actor, event, detail, prev_hash, created_at}. prev_hash of the first event is 'sha256:' followed by 64 zeros. The database rejects UPDATE and DELETE and verifies prev_hash on insert.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["seq", "actor", "event", "detail", "prev_hash", "hash", "created_at"],
+  "properties": {
+    "seq": {"type": "integer", "minimum": 1},
+    "incident_id": {"$ref": "common.json#/$defs/incident_id"},
+    "actor": {"type": "string", "pattern": "^(detector|rca|planner|policy|actuator|verifier|api|harness|operator:[A-Za-z0-9._-]{1,40})$"},
+    "event": {"type": "string", "pattern": "^[a-z][a-z0-9_.]{2,60}$"},
+    "detail": {"type": "object"},
+    "prev_hash": {"$ref": "common.json#/$defs/sha256"},
+    "hash": {"$ref": "common.json#/$defs/sha256"},
+    "created_at": {"$ref": "common.json#/$defs/timestamp"}
+  }
+}
