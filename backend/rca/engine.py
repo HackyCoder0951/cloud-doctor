@@ -301,6 +301,8 @@ class RcaEngine:
             c.context["previous_version"] = dp.detail.get("version_from")
             c.need(True, 2, f"deploy event: {s} {dp.detail.get('version_from')} -> {dp.detail.get('version_to')} at {iso(dp.time)[11:19]}Z", "temporal_correlation", [dp.eid], "event", direct=False)
         vers = f.versions.get(s, [])
+        if not dp and len(vers) > 1:  # no change feed: the build_info label history still gives previous version and change time
+            c.context["previous_version"] = vers[-2]
         vt = f.raw(s, "build_version")
         if vt:
             c.need(len(vers) > 1, 1, f"the build_info version label of {s} changed within the window ({', '.join(vers)})", "observation", [vt.eid], "metric")

@@ -85,6 +85,7 @@ class Facts:
         self.log_failed: dict[str, Evidence] = {}
         self.feed_failed: Evidence | None = None
         self.versions: dict[str, list[str]] = {}
+        self.version_since: dict[str, dict[str, datetime]] = {}
         for e in sorted(self.evidence, key=lambda x: (x.collected_at, x.evidence_id)):
             self._ingest(e)
         self.window_end = max((ts.window_end for ts in self._ts.values()), default=None)
@@ -99,7 +100,11 @@ class Facts:
                 return
             self.failed.pop(key, None)
             if m == "build_version":
-                self.versions[e.service] = sorted({v["version"] for v in p.get("versions", [])})
+                first_seen: dict[str, str] = {}
+                for v in sorted(p.get("versions", []), key=lambda r: r["t"]):
+                    first_seen.setdefault(v["version"], v["t"])
+                self.versions[e.service] = list(first_seen)  # ordered by first appearance: [..., previous, current]
+                self.version_since[e.service] = {k: parse_ts(t) for k, t in first_seen.items()}
                 self._ts[key] = TS(e.service, m, [], e, parse_ts(p["window"]["end"]))
                 return
             pts = [(parse_ts(s["t"]), float(s["v"])) for s in p.get("series", [])]

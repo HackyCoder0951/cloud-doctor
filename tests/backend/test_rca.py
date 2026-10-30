@@ -133,3 +133,13 @@ def test_diagnosis_is_deterministic(world, catalog, cfg):
     a, _, _ = diagnose(world, catalog, cfg, "redis_outage", 140)
     b, _, _ = diagnose(world, catalog, cfg, "redis_outage", 140)
     assert [(h.cause_id, h.confidence) for h in a.hypotheses] == [(h.cause_id, h.confidence) for h in b.hypotheses]
+
+
+def test_bad_deployment_without_change_feed_uses_build_info_history(world, catalog, cfg):
+    data = world("bad_deployment").scenario.data
+    data["events"] = []  # no deploy events at all (the live deployment has no change feed yet)
+    d, _, _ = diagnose(world, catalog, cfg, "bad_deployment", 140, scenario_data=data)
+    t = top(d)
+    assert t.cause_id == "api_bad_deployment"
+    assert d.recommended_action.action_id == "rollback_service" and d.recommended_action.params == {"service": "api", "version": "v1"}
+    assert t.confidence < 0.95  # fewer independent signals than with the deploy event
