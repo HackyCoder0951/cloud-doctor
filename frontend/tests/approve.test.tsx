@@ -49,6 +49,8 @@ describe('approve / reject flow (medium-risk plan)', () => {
     expect(post?.credentials).toBe('include');
     // the mock moved the incident to remediating and the panel is gone after the reload
     await waitFor(() => expect(screen.queryByLabelText('Approval for PL-0101')).toBeNull());
+    // the confirmation must survive the panel disappearing (regression found by the nginx e2e run)
+    expect(screen.getByTestId('notice')).toHaveTextContent(/Approved\. Decision DEC-/);
   });
 
   it('uses a fresh Idempotency-Key for each distinct action', async () => {

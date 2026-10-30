@@ -51,7 +51,7 @@ export function ExecutionView({ x }: { x: Execution }) {
   );
 }
 
-export function ApprovalPanel({ incident, plan, onDone }: { incident: string; plan: Plan; onDone: () => void }) {
+export function ApprovalPanel({ incident, plan, onDone }: { incident: string; plan: Plan; onDone: (message: string) => void }) {
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -65,16 +65,18 @@ export function ApprovalPanel({ incident, plan, onDone }: { incident: string; pl
     setBusy(true);
     setMsg(null);
     keyRef.current ??= newIdempotencyKey();
+    let text: string;
     try {
       if (kind === 'approve') {
         const d = await api.approvePlan(incident, plan.plan_id, { plan_hash: plan.plan_hash, reason: reason.trim() }, keyRef.current);
-        setMsg({ ok: true, text: `Approved. Decision ${d.decision_id}: ${d.final}. Policy is re-evaluated at execution.` });
+        text = `Approved. Decision ${d.decision_id}: ${d.final}. Policy is re-evaluated at execution.`;
       } else {
         await api.rejectPlan(incident, plan.plan_id, { reason: reason.trim() }, keyRef.current);
-        setMsg({ ok: true, text: 'Rejected.' });
+        text = 'Rejected.';
       }
       keyRef.current = null;
-      onDone();
+      setMsg({ ok: true, text });
+      onDone(text);
     } catch (e) {
       if (!(e instanceof ApiError && e.kind === 'network')) keyRef.current = null;
       setMsg({ ok: false, text: describeError(e) });
@@ -103,8 +105,11 @@ export function ApprovalPanel({ incident, plan, onDone }: { incident: string; pl
 export function RemediationTab({ incident }: { incident: string }) {
   const { data, error, loading, reload } = useApi(() => api.getRemediation(incident), [incident]);
   useLiveReload(reload, (e) => e.incident_id === incident);
+  // Kept here, not in the approval panel: the panel unmounts as soon as the reload shows the plan is no longer pending.
+  const [notice, setNotice] = useState<string | null>(null);
   return (
     <section aria-label="Remediation">
+      {notice ? <p role="status" className="ok" data-testid="notice">{notice}</p> : null}
       <ErrorNote error={error} what="Remediation" />
       {loading && !data ? <Loading what="remediation" /> : null}
       {data ? (
@@ -133,7 +138,7 @@ export function RemediationTab({ incident }: { incident: string }) {
                 {decisions.length === 0 ? <p className="muted">No decision recorded yet.</p> : decisions.map((d) => <DecisionView key={d.decision_id} d={d} />)}
                 <h4>Executions</h4>
                 {executions.length === 0 ? <p className="muted">Not executed.</p> : executions.map((x) => <ExecutionView key={x.execution_id} x={x} />)}
-                {awaiting ? <ApprovalPanel incident={incident} plan={p} onDone={reload} /> : null}
+                {awaiting ? <ApprovalPanel incident={incident} plan={p} onDone={(m) => { setNotice(m); reload(); }} /> : null}
               </article>
             );
           })}
