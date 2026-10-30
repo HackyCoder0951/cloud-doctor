@@ -1,0 +1,14 @@
+{
+  "execution_id": "EX-0001",
+  "plan_id": "PL-0001",
+  "idempotency_key": "idem-0001-a",
+  "started_at": "2026-11-02T09:00:29Z",
+  "ended_at": "2026-11-02T09:00:31Z",
+  "result": "success",
+  "executed_argv": [
+    "docker",
+    "restart",
+    "cd-redis"
+  ],
+  "detail": "container restarted"
+}
