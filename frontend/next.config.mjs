@@ -8,6 +8,9 @@ const nextConfig = {
   images: { unoptimized: true },
   reactStrictMode: true,
   poweredByHeader: false,
+  // Deterministic build id: the inline flight-data scripts embed it, and nginx allow-lists their SHA-256
+  // hashes in the CSP (see docs/dev/frontend/STATUS.md, F1). Chunk file names are content-hashed anyway.
+  generateBuildId: async () => process.env.CD_BUILD_ID ?? 'cloud-doctor-static',
 };
 
 export default nextConfig;

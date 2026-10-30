@@ -17,7 +17,10 @@
     "check:nginx": "node scripts/check-nginx.mjs",
     "ci": "npm run check:api && npm run scan && npm run typecheck && npm test && npm run build && npm run check:nginx",
     "scan": "node scripts/scan-forbidden.mjs",
-    "prebuild": "node scripts/scan-forbidden.mjs"
+    "prebuild": "node scripts/scan-forbidden.mjs",
+    "postbuild": "node scripts/gen-csp-hashes.mjs",
+    "check:csp": "node scripts/gen-csp-hashes.mjs --check",
+    "nginx:render": "node scripts/render-nginx.mjs"
   },
   "dependencies": {
     "next": "16.4.3",
