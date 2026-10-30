@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cloud-doctor-invariants"
+version = "0.1.0"
+description = "Cloud Doctor Layer 1 policy invariants (I-01..I-08). Standard library only."
+requires-python = ">=3.12"
+dependencies = []
+
+[project.optional-dependencies]
+# PyYAML is imported ONLY in invariants/yaml_loader.py, behind an optional import.
+yaml = ["PyYAML==6.0.3"]
+dev = ["pytest==9.2.0"]
+
+[tool.setuptools]
+packages = ["invariants"]
