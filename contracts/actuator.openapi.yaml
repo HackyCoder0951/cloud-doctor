@@ -1,0 +1,52 @@
+openapi: 3.1.0
+info:
+  title: Cloud Doctor Actuator API
+  version: "1.0.0"
+  description: >
+    Local-only API of the separate actuator process, served over a unix domain socket
+    (path from CD_ACTUATOR_SOCKET, file mode 0660, owned by the actuator user). Not reachable from
+    any LLM-facing code. The actuator accepts ONLY signed, typed catalogue plans: it verifies
+    signature, expiry, nonce (replay) and plan_hash, re-runs Layer 1 invariants (stdlib-only package
+    `invariants`), and fails closed on any error. Commands are fixed argument vectors; a shell is
+    never used. MVP supports exactly one executing action: `docker restart <allowlisted container>`
+    where the container must be in infra/catalog/services.yaml AND carry the label cloud-doctor.sandbox=true.
+servers:
+  - url: http://unix/
+paths:
+  /v1/validate:
+    post:
+      operationId: validatePlan
+      summary: Dry-run Layer 1 invariants and signature checks. No side effects.
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: "./schemas/actuator.json#/$defs/validate_request"}}}
+      responses:
+        "200":
+          description: Validation result (ok=false when any invariant fails; reasons name rule ids)
+          content: {application/json: {schema: {$ref: "./schemas/actuator.json#/$defs/validate_response"}}}
+  /v1/execute:
+    post:
+      operationId: executePlan
+      summary: Verify and execute. Idempotent on idempotency_key; a refused plan returns an execution with result=refused.
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: "./schemas/actuator.json#/$defs/execute_request"}}}
+      responses:
+        "200":
+          description: Execution record (result success, failed or refused)
+          content: {application/json: {schema: {$ref: "./schemas/actuator.json#/$defs/execute_response"}}}
+  /healthz:
+    get:
+      operationId: actuatorHealth
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [state, invariants_version]
+                properties:
+                  state: {type: string, enum: [ok, degraded]}
+                  invariants_version: {type: string}
