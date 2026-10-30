@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cloud-doctor.local/schemas/plan.json",
+  "title": "Remediation plan",
+  "description": "A typed catalogue action. Free text is never executable. plan_hash is sha256 over the canonical JSON of this object with plan_hash removed; approvals and signatures bind to it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["plan_id", "incident_id", "action_id", "params", "risk_class", "origin", "evidence_refs", "rationale", "created_at", "plan_hash"],
+  "properties": {
+    "plan_id": {"$ref": "common.json#/$defs/plan_id"},
+    "incident_id": {"$ref": "common.json#/$defs/incident_id"},
+    "action_id": {"$ref": "common.json#/$defs/action_id"},
+    "params": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "service": {"$ref": "common.json#/$defs/service_name"},
+        "version": {"type": "string", "pattern": "^[A-Za-z0-9._-]{1,64}$"},
+        "replicas": {"type": "integer", "minimum": 1, "maximum": 5},
+        "dependency": {"$ref": "common.json#/$defs/service_name"},
+        "reason": {"type": "string", "maxLength": 300}
+      }
+    },
+    "risk_class": {"$ref": "common.json#/$defs/risk_class"},
+    "origin": {"$ref": "common.json#/$defs/origin"},
+    "evidence_refs": {"type": "array", "minItems": 1, "items": {"$ref": "common.json#/$defs/evidence_id"}},
+    "rationale": {"type": "string", "maxLength": 500},
+    "created_at": {"$ref": "common.json#/$defs/timestamp"},
+    "plan_hash": {"$ref": "common.json#/$defs/sha256"}
+  },
+  "allOf": [
+    {"if": {"properties": {"action_id": {"const": "restart_service"}}}, "then": {"properties": {"params": {"required": ["service"]}}}},
+    {"if": {"properties": {"action_id": {"const": "rollback_service"}}}, "then": {"properties": {"params": {"required": ["service", "version"]}}}},
+    {"if": {"properties": {"action_id": {"const": "scale_service"}}}, "then": {"properties": {"params": {"required": ["service", "replicas"]}}}},
+    {"if": {"properties": {"action_id": {"const": "clear_cache"}}}, "then": {"properties": {"params": {"required": ["service"]}}}},
+    {"if": {"properties": {"action_id": {"const": "isolate_dependency"}}}, "then": {"properties": {"params": {"required": ["service", "dependency"]}}}},
+    {"if": {"properties": {"action_id": {"const": "escalate"}}}, "then": {"properties": {"params": {"required": ["reason"]}}}}
+  ]
+}
