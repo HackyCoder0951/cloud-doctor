@@ -1,0 +1,18 @@
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# secrets and local environment
+.env
+*.env
+*.secret
+
+# future build artefacts
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+out/
+dist/
