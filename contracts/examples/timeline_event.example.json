@@ -1,0 +1,12 @@
+{
+  "event_id": "TL-0001",
+  "incident_id": "INC-0001",
+  "event_time": "2026-11-02T09:00:12Z",
+  "collected_at": "2026-11-02T09:00:20Z",
+  "kind": "metric_change",
+  "service": "redis",
+  "summary": "redis target went down",
+  "evidence_refs": [
+    "EV-001"
+  ]
+}
