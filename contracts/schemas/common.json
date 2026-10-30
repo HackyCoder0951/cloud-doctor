@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cloud-doctor.local/schemas/common.json",
+  "title": "Common definitions",
+  "description": "Shared identifiers and enumerations. Frozen contract v1: change only through docs/dev/contract-change-requests/.",
+  "$defs": {
+    "incident_id": {"type": "string", "pattern": "^INC-[0-9]{4,}$"},
+    "evidence_id": {"type": "string", "pattern": "^EV-[0-9]{3,}$"},
+    "plan_id": {"type": "string", "pattern": "^PL-[0-9]{4,}$"},
+    "decision_id": {"type": "string", "pattern": "^DEC-[0-9]{4,}$"},
+    "execution_id": {"type": "string", "pattern": "^EX-[0-9]{4,}$"},
+    "event_id": {"type": "string", "pattern": "^TL-[0-9]{4,}$"},
+    "service_name": {"type": "string", "pattern": "^[a-z][a-z0-9-]{1,40}$"},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "health_state": {"enum": ["HEALTHY", "DEGRADED", "UNHEALTHY", "UNKNOWN"]},
+    "missing_signal_state": {"enum": ["none", "no_data_expected", "no_data_unexpected", "collection_failed"]},
+    "risk_class": {"enum": ["low", "medium", "high"]},
+    "action_id": {"enum": ["restart_service", "rollback_service", "scale_service", "clear_cache", "isolate_dependency", "escalate"]},
+    "evidence_status": {"enum": ["ok", "empty", "error", "timeout"]},
+    "claim_type": {"enum": ["observation", "temporal_correlation", "inference", "hypothesis"]},
+    "origin": {"enum": ["rule", "llm"]},
+    "decision_result": {"enum": ["allow", "allow_with_approval", "deny"]},
+    "incident_state": {"enum": ["detected", "investigating", "diagnosed", "remediating", "verifying", "recovered", "escalated", "closed"]},
+    "verdict": {"enum": ["recovered", "partial", "failed", "regression", "relapse", "unverifiable"]}
+  }
+}
