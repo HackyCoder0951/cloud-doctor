@@ -1,0 +1,30 @@
+{
+  "evidence_id": "EV-001",
+  "incident_id": "INC-0001",
+  "source": "prometheus",
+  "type": "metric",
+  "service": "redis",
+  "observed_at": "2026-11-02T09:00:12Z",
+  "collected_at": "2026-11-02T09:00:20Z",
+  "query": "up{service=\"redis\"}",
+  "status": "ok",
+  "summary": "redis target down since 09:00:12",
+  "payload": {
+    "series": [
+      {
+        "t": "2026-11-02T09:00:05Z",
+        "v": 1
+      },
+      {
+        "t": "2026-11-02T09:00:12Z",
+        "v": 0
+      },
+      {
+        "t": "2026-11-02T09:00:20Z",
+        "v": 0
+      }
+    ]
+  },
+  "untrusted": false,
+  "payload_hash": "sha256:1839790517eca2aea55a56a70a37a0a8a627b5ae7856d607fad49bf550864249"
+}
