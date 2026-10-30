@@ -4,6 +4,25 @@
 
 > **Prototype scope (user decision 2026-10-31): C0 and C1 only.** C2, C3 and C4 are designed for clients but not implemented in the prototype; capability and quality claims about them remain hypotheses.
 
+## NVIDIA NIM as the prototype's C1 provider (user has NIM API access)
+
+**Classification:** NIM's hosted endpoint is a **C1 (vendor API)** channel behind the same gateway; a self-hosted NIM container would be **C3**.
+
+**Verified from NVIDIA's own pages [S-122, S-123] and a direct check [S-124]:**
+- Base URL `https://integrate.api.nvidia.com/v1`, `POST /v1/chat/completions`, Bearer-token authentication, described as "Compatible with OpenAI"; the public model listing is reachable and showed 85 models on 2026-10-31.
+- The hosted chat request schema for the example model has `additionalProperties: false` and lists only `model, messages, temperature, top_p, tools, frequency_penalty, presence_penalty, max_tokens, stream, stop`; `max_tokens` default is 1024 and the maximum 4096. **`response_format`, `guided_json` and `nvext` are not in that schema**, and `tool_choice` is not in it either (although NVIDIA's own code templates send it when present — an unresolved discrepancy).
+- The docs note that select models are available as downloadable containers with an NVIDIA AI Enterprise entitlement [S-122].
+
+**Not found (unverified):** whether the hosted endpoint accepts or enforces `guided_json` / `response_format` [S-125 covers self-hosted NIM only and returned no text]; which models support tool calling; official rate limits and credits (third parties report ~40 requests per minute and ~1,000 credits [S-126, Tier 3]); data retention, logging, training-use and commercial-use terms for hosted prompts (not found; the terms page was not reachable).
+
+**Design consequences (DESIGN DECISION):**
+1. Add an **OpenAI-compatible adapter** to the gateway (base URL, model, key environment variable, timeout, `max_tokens` ≤ 4096).
+2. **Do not rely on server-side schema enforcement.** The grounding validator already starts with client-side schema validation; the adapter asks for JSON only, parses, validates, retries once with the validator's error, and falls back to C0 (`evidence-grounding.md`). If the smoke test shows `guided_json` is enforced, enable it as an optimisation, not as a safety control.
+3. **Do not rely on tool calling** until tested per model; the default is to pre-fetch evidence into the bundle.
+4. Client-side **rate limiter** set below the unverified third-party figure (for example 30 requests per minute) with exponential back-off on HTTP 429.
+5. **Data handling:** until NVIDIA's terms are read, treat the hosted endpoint as an external processor of unknown retention — send only the synthetic sandbox data, redacted, and never client data.
+6. Run `tools/nim_smoke_test.py` with your own key (set in your shell, never pasted) to record capability flags per model; the gateway reads those flags.
+
 ## Why channels
 
 The AI layer is optional and advisory (ADR-001, ADR-003). Clients differ on data sensitivity, budget, connectivity and compliance. So the LLM is **a swappable channel behind one interface**, chosen by client policy. The deterministic core works with every channel, including none.
