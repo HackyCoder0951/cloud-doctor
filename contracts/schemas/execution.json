@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cloud-doctor.local/schemas/execution.json",
+  "title": "Action execution record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["execution_id", "plan_id", "idempotency_key", "started_at", "result"],
+  "properties": {
+    "execution_id": {"$ref": "common.json#/$defs/execution_id"},
+    "plan_id": {"$ref": "common.json#/$defs/plan_id"},
+    "idempotency_key": {"type": "string", "pattern": "^[A-Za-z0-9_-]{8,64}$"},
+    "started_at": {"$ref": "common.json#/$defs/timestamp"},
+    "ended_at": {"$ref": "common.json#/$defs/timestamp"},
+    "result": {"enum": ["success", "failed", "refused"]},
+    "refusal_rule_ids": {"type": "array", "items": {"type": "string"}},
+    "executed_argv": {"type": "array", "items": {"type": "string"}, "description": "Exact fixed argument vector run, never a shell string. Empty when refused."},
+    "detail": {"type": "string", "maxLength": 500}
+  }
+}
