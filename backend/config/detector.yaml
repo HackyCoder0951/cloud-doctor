@@ -1,0 +1,98 @@
+# Detector configuration. Metric/label names follow contracts/telemetry.md (frozen).
+# Query templates use $service / $dependency placeholders (string.Template); PromQL braces stay literal.
+poll_interval_seconds: 5
+low_traffic_floor_rps: 2.0          # contracts/telemetry.md: loadgen is ~10 rps; guard must stay above 1 rps
+hysteresis: {enter_after: 3, leave_after: 3}   # consecutive polls to enter / leave an alert
+incident_window_seconds: 120        # alert joins an open incident if within this window of its last activity
+restart_event_ttl_polls: 6
+
+metrics:
+  up: 'up{service="$service"}'
+  cd_service_up: 'cd_service_up{service="$service"}'
+  absent_cd_service_up: 'absent(cd_service_up{service="$service"})'
+  absent_up: 'absent(up{service="$service"})'
+  request_rate: 'sum(rate(http_requests_total{service="$service"}[15s]))'
+  error_ratio: 'sum(rate(http_requests_total{service="$service",status=~"5.."}[15s])) / sum(rate(http_requests_total{service="$service"}[15s]))'
+  latency_p95: 'histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{service="$service"}[15s])))'
+  queue_depth: 'queue_depth{service="$service",queue="jobs"}'
+  absent_queue_depth: 'absent(queue_depth{service="$service",queue="jobs"})'
+  start_time: 'process_start_time_seconds{service="$service"}'
+  dependency_up: 'cd_dependency_up{service="$service",dependency="$dependency"}'
+  build_version: 'build_info{service="$service"}'
+  # Not in contracts/telemetry.md (assumption: default prometheus_client process collector). Optional signals.
+  memory_bytes: 'process_resident_memory_bytes{service="$service"}'
+  cpu_cores: 'rate(process_cpu_seconds_total{service="$service"}[30s])'
+
+# kinds: catalog service kinds the rule applies to.
+rules:
+  service_down:
+    layer: dependency_state
+    severity: critical
+    health: UNHEALTHY
+    kinds: [app, cache, queue_worker, database, load_generator]
+    enter_after: 2
+    leave_after: 3
+  telemetry_gap:                    # absent() style: no series at all for up{service=X}
+    layer: telemetry
+    severity: warning
+    health: UNKNOWN
+    kinds: [app, cache, queue_worker, database, load_generator]
+    enter_after: 3
+    leave_after: 3
+  error_ratio:
+    layer: symptom
+    severity: critical
+    health: UNHEALTHY
+    kinds: [app]
+    threshold: 0.05
+    enter_after: 3
+    leave_after: 4
+  latency_p95:
+    layer: symptom
+    severity: warning
+    health: DEGRADED
+    kinds: [app]
+    threshold_seconds: 0.5          # falls back to the catalog SLO when present
+    enter_after: 3
+    leave_after: 4
+  queue_growth:
+    layer: symptom
+    severity: warning
+    health: DEGRADED
+    kinds: [queue_worker]
+    min_depth: 20
+    growth_window_polls: 4
+    min_growth: 10
+    enter_after: 2
+    leave_after: 4
+  queue_absent:                     # queue_depth series disappears (worker cannot reach redis): a signal, not "healthy"
+    layer: symptom
+    severity: warning
+    health: DEGRADED
+    kinds: [queue_worker]
+    enter_after: 2
+    leave_after: 3
+  dependency_down:
+    layer: dependency_state
+    severity: warning
+    health: DEGRADED
+    kinds: [app, queue_worker]
+    enter_after: 2
+    leave_after: 3
+  restart:
+    layer: resource_saturation
+    severity: warning
+    health: DEGRADED
+    kinds: [app, queue_worker, load_generator]
+    opens_incident: false           # a lone restart is recorded and attached as context, it does not open an incident
+    enter_after: 1
+    leave_after: 6
+  memory_growth:                    # optional saturation warning (deriv over the memory gauge)
+    layer: resource_saturation
+    severity: warning
+    health: DEGRADED
+    kinds: [app, queue_worker]
+    min_growth_bytes: 20000000
+    growth_window_polls: 6
+    enter_after: 2
+    leave_after: 4
