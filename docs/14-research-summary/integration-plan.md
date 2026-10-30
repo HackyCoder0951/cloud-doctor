@@ -25,3 +25,7 @@ Coordinator draft. Stream branches are **not merged** until the user decides. Ev
 - STATUS.md claims map to a command that was run; measured numbers have run counts; unmeasured = "pending".
 - No Go; no attribution lines in commits; no secrets; no LLM dependency outside `ai/`.
 - Detectors use `cd_service_up` and `up`/absence rules, not `up` of probe-scraped services or a rising `queue_depth` for worker crashes (see `docs/dev/infra/STATUS.md`).
+
+## Coordinator check log
+- 2026-10-30 (cloud, `git fetch --all`): remote branches are `main` (ee4aaa6), `stream/infra`, `stream/infra-p7f2rn`. **`stream/backend`, `stream/policy`, `stream/frontend`, `stream/harness` have not been pushed**, so nothing from them could be reviewed. `validate_contracts.py` PASS on the infra branch. `sprint-status.md` on `main` still lists those streams as "running, status unknown"; it was not edited from this branch (main is the newer copy; update it on main).
+- Stream A re-verified in the cloud container: `tests/integration/gate_g1.sh` PASS (contract validation + 17 smoke checks). Spikes S1–S7 still not run.
