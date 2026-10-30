@@ -26,7 +26,7 @@ class Builder:
 
     # -- sampling helpers
     def times(self, lo: float = 0, hi: float | None = None):
-        hi = self.duration if hi is None else hi
+        hi = self.duration + 1 if hi is None else hi  # inclusive of the final step
         t = lo
         while t < hi:
             yield t
@@ -34,7 +34,7 @@ class Builder:
 
     def put(self, svc: str, metric: str, fn, lo: float = 0, hi: float | None = None) -> None:
         """Replace samples of svc/metric in [lo, hi) with fn(t) (a constant or callable; None = leave a gap)."""
-        cur = [s for s in self.d["samples"].setdefault(svc, {}).get(metric, []) if not (lo <= s[0] < (self.duration if hi is None else hi))]
+        cur = [s for s in self.d["samples"].setdefault(svc, {}).get(metric, []) if not (lo <= s[0] < (self.duration + 1 if hi is None else hi))]
         for i, t in enumerate(self.times(lo, hi)):
             v = fn(t) if callable(fn) else fn
             if v is not None:
@@ -131,31 +131,38 @@ def worker_crash() -> dict:
 
 
 def memory_exhaustion() -> dict:
-    """EXP-04: api memory leaks, OOM kills at ~t=112 and ~t=232 (restart each time), growth resumes."""
+    """EXP-04: api memory leaks; OOM kills at t=110 and t=205 (down 15s, then restart); growth resumes each time."""
     b = Builder("memory_exhaustion", "api memory leak under a limit; OOM kill, restart, recurrence", duration=300)
     limit = 256e6
+    holes = ("start_time", "memory_bytes", "request_rate", "latency_p95", "cpu_cores", "build_version")
 
-    def mem(t0):
-        return lambda t: 100e6 + (t - t0) * 1.4e6
-    b.put("api", "memory_bytes", lambda t: 120e6 + _noise(int(t), 2e6), 0, 40)
-    b.put("api", "memory_bytes", mem(-16), 40, 112)          # reaches limit ~t=111
-    b.put("api", "up", 0, 112, 120)
-    for hole in ("start_time", "memory_bytes", "request_rate", "latency_p95"):
-        b.gap("api", hole, 112, 120)
-    b.put("api", "error_ratio", 1.0, 112, 120)
-    b.put("api", "start_time", BASE_EPOCH + 120, 120, 232)
-    b.put("api", "memory_bytes", mem(120 - 12), 120, 232)
-    b.put("api", "up", 0, 232, 240)
-    for hole in ("start_time", "memory_bytes", "request_rate", "latency_p95"):
-        b.gap("api", hole, 232, 240)
-    b.put("api", "error_ratio", 1.0, 232, 240)
-    b.put("api", "start_time", BASE_EPOCH + 240, 240)
-    b.put("api", "memory_bytes", mem(240 - 12), 240)
-    b.event(112, "oom_kill", "api", container="cd-api", limit_bytes=int(limit))
-    b.event(120, "container_start", "api", container="cd-api")
-    b.event(232, "oom_kill", "api", container="cd-api", limit_bytes=int(limit))
-    b.event(240, "container_start", "api", container="cd-api")
-    b.log(110, "api", "info", "request served")  # logs simply stop: no clean error message at OOM
+    def cycle(t_start, t_oom, t_back, restart_epoch):
+        slope = (limit - 100e6) / (t_oom - t_start)
+        b.put("api", "memory_bytes", lambda t: 100e6 + (t - t_start) * slope, t_start, t_oom)
+        b.put("api", "up", 0, t_oom, t_back)
+        for h in holes:
+            b.gap("api", h, t_oom, t_back)
+        b.put("api", "error_ratio", 1.0, t_oom, t_back)
+        b.put("api", "start_time", restart_epoch, t_back)
+
+    b.put("api", "memory_bytes", lambda t: 120e6 + (t - 40) * 1.95e6, 40, 110)
+    b.put("api", "up", 0, 110, 125)
+    for h in holes:
+        b.gap("api", h, 110, 125)
+    b.put("api", "error_ratio", 1.0, 110, 125)
+    b.put("api", "start_time", BASE_EPOCH + 125, 125)
+    b.put("api", "memory_bytes", lambda t: 100e6 + (t - 125) * 1.95e6, 125, 205)
+    b.put("api", "up", 0, 205, 220)
+    for h in holes:
+        b.gap("api", h, 205, 220)
+    b.put("api", "error_ratio", 1.0, 205, 220)
+    b.put("api", "start_time", BASE_EPOCH + 220, 220)
+    b.put("api", "memory_bytes", lambda t: 100e6 + (t - 220) * 1.95e6, 220)
+    b.event(110, "oom_kill", "api", container="cd-api", limit_bytes=int(limit))
+    b.event(125, "container_start", "api", container="cd-api")
+    b.event(205, "oom_kill", "api", container="cd-api", limit_bytes=int(limit))
+    b.event(220, "container_start", "api", container="cd-api")
+    b.log(108, "api", "info", "request served")  # logs simply stop: no clean error message at OOM
     return b.build()
 
 
@@ -201,9 +208,9 @@ def db_saturation() -> dict:
 def flapping() -> dict:
     """Single-poll error spikes that never persist for 3 consecutive polls (hysteresis must absorb them)."""
     b = Builder("flapping", "api error ratio spikes for one poll at a time")
-    for t in range(30, 280, 20):
-        b.put("api", "error_ratio", 0.5, t, t + 5)
-    for t in range(40, 280, 30):
+    for t in range(30, 280, 40):
+        b.put("api", "error_ratio", 0.5, t, t + 5)   # one poll
+    for t in range(50, 280, 40):
         b.put("api", "error_ratio", 0.4, t, t + 10)  # two consecutive polls, still below enter_after=3
     return b.build()
 

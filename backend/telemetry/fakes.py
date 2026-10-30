@@ -64,7 +64,7 @@ def build_query_index(cfg: DetectorConfig, catalog: Catalog) -> dict[str, tuple[
 
 
 class FixturePromClient:
-    LOOKBACK_STEPS = 3
+    LOOKBACK_STEPS = 1  # fixture samples are query outputs at step resolution: an instant query sees one step back
 
     def __init__(self, scenario: Scenario, index: dict[str, tuple[str, str]]) -> None:
         self.s, self.index = scenario, index
@@ -79,7 +79,7 @@ class FixturePromClient:
             got = self._series(service, base, start, end, instant)
             return [] if got else [Series({}, [(end, 1.0)])]
         lo, hi = self.s.offset(start), self.s.offset(end)
-        pts = [(o, v) for o, v in self._samples(service, key) if lo <= o <= hi]
+        pts = [(o, v) for o, v in self._samples(service, key) if (lo < o if instant else lo <= o) and o <= hi]
         if not pts:
             return []
         if key == "build_version":
