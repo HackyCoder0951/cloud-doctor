@@ -12,10 +12,14 @@ Branch `stream/infra`. Updated 2026-10-31. Honest summary; nothing here is an ex
 - `infra/tools/fault_check.py` — one observation (N=1) of a Redis stop and restart: `cd_service_up{service="redis"}` fell to 0 about 6 s after the stop, `cd_dependency_up{service="api",dependency="redis"}` to 0 at about 9 s, `queue_depth` disappeared at about 12 s, the api 5xx ratio reached about 1.0 at about 15 s (15 s rate window), the api error logs were queryable in Loki; after the restart the probe returned to 1 within 3 s and the api error ratio fell below 1% by about 15 s. **Single observation; not an experiment result.**
 - Finding confirmed: `up{service="redis"}` stays 1 while Redis is down (the scrape target is the probe sidecar), so detectors must use `cd_service_up` (as `contracts/telemetry.md` states).
 
+- Cloud re-run (2026-10-30, plain Docker daemon started inside the cloud container; image builds needed the environment's proxy CA via a local, uncommitted compose override): `make smoke` **PASS**, 17 checks again.
+- `infra/tools/fault_worker.py` — one observation (N=1) of `docker kill cd-worker` and restart: `up{service="worker"}` fell to 0 within about 3 s of the kill, processing rate dropped below 0.1 jobs/s by about 9 s; after `docker start`, `up` was 1 at about 3 s, processing resumed at about 9 s, and the backlog (855 jobs at restart) drained to 0 by about 24 s. **Single observation; not an experiment result.**
+- Finding: `queue_depth` is exported by the worker, so while the worker is dead the series is **absent** instead of growing; the backlog is only visible after restart. Detectors for a worker crash must rely on `up`/absence of worker series, not on a rising `queue_depth`. (Candidate addition to `contracts/telemetry.md`; contract not changed here.)
+
 ## Not done
 - Micro-VM sandbox (needs the user to install Docker Sandboxes with sudo); spikes S1–S7 not run.
 - Alertmanager and Grafana (not used by the MVP detector design).
-- Worker-crash, memory and other fault observations; scale and rollback paths.
+- Memory and other fault observations; scale and rollback paths.
 - Dependency lock for the base images beyond tags; no image digests pinned yet.
 
 ## Assumptions / risks
