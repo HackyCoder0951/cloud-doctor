@@ -1,0 +1,289 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-11-02T09:01:12Z",
+  "generator": {
+    "mode": "deterministic",
+    "version": "report-0.1"
+  },
+  "incident": {
+    "incident_id": "INC-0001",
+    "state": "recovered",
+    "opened_at": "2026-11-02T09:00:18Z",
+    "closed_at": "2026-11-02T09:01:10Z",
+    "severity": "high",
+    "services": [
+      "redis",
+      "api",
+      "worker"
+    ],
+    "symptoms": [
+      "api 5xx ratio above threshold",
+      "worker queue depth rising",
+      "redis target down"
+    ],
+    "outcome": "mitigated",
+    "root_cause_confirmed": false
+  },
+  "timeline": [
+    {
+      "event_id": "TL-0001",
+      "incident_id": "INC-0001",
+      "event_time": "2026-11-02T09:00:12Z",
+      "collected_at": "2026-11-02T09:00:20Z",
+      "kind": "metric_change",
+      "service": "redis",
+      "summary": "redis target went down",
+      "evidence_refs": [
+        "EV-001"
+      ]
+    },
+    {
+      "event_id": "TL-0002",
+      "incident_id": "INC-0001",
+      "event_time": "2026-11-02T09:00:18Z",
+      "collected_at": "2026-11-02T09:00:18Z",
+      "kind": "alert",
+      "service": "api",
+      "summary": "api error ratio above threshold for 3 polls",
+      "evidence_refs": [
+        "EV-002"
+      ],
+      "suppressed": false
+    },
+    {
+      "event_id": "TL-0003",
+      "incident_id": "INC-0001",
+      "event_time": "2026-11-02T09:00:29Z",
+      "collected_at": "2026-11-02T09:00:29Z",
+      "kind": "action",
+      "service": "redis",
+      "summary": "restart_service executed",
+      "evidence_refs": []
+    }
+  ],
+  "evidence_ids": [
+    "EV-001",
+    "EV-002",
+    "EV-003",
+    "EV-004",
+    "EV-005"
+  ],
+  "diagnosis": {
+    "incident_id": "INC-0001",
+    "generated_at": "2026-11-02T09:00:26Z",
+    "origin": "rule",
+    "engine_version": "rca-0.1",
+    "hypotheses": [
+      {
+        "rank": 1,
+        "cause_id": "redis_unavailable",
+        "service": "redis",
+        "description": "Redis is down; api and worker failures are downstream symptoms",
+        "confidence": 0.82,
+        "confidence_basis": [
+          "target down",
+          "error logs name redis",
+          "dependency edge api->redis"
+        ],
+        "status": "supported",
+        "claims": [
+          {
+            "text": "redis target reports down",
+            "type": "observation",
+            "evidence": [
+              "EV-001"
+            ]
+          },
+          {
+            "text": "api logs show connection refused to redis",
+            "type": "observation",
+            "evidence": [
+              "EV-003"
+            ]
+          },
+          {
+            "text": "api errors rose after the redis target went down",
+            "type": "temporal_correlation",
+            "evidence": [
+              "EV-001",
+              "EV-002"
+            ]
+          }
+        ],
+        "contradicting": [
+          {
+            "text": "app database is healthy",
+            "type": "observation",
+            "evidence": [
+              "EV-005"
+            ]
+          }
+        ],
+        "alternatives": [
+          "api_bug",
+          "network_partition"
+        ],
+        "unknowns": [
+          "why redis stopped"
+        ]
+      },
+      {
+        "rank": 2,
+        "cause_id": "api_bug",
+        "service": "api",
+        "description": "Defect in the api service",
+        "confidence": 0.09,
+        "status": "candidate",
+        "claims": [
+          {
+            "text": "api error ratio is elevated",
+            "type": "observation",
+            "evidence": [
+              "EV-002"
+            ]
+          }
+        ],
+        "contradicting": [
+          {
+            "text": "api errors name redis connection failures",
+            "type": "observation",
+            "evidence": [
+              "EV-003"
+            ]
+          }
+        ],
+        "alternatives": [],
+        "unknowns": [
+          "no recent deploy evidence collected"
+        ]
+      }
+    ],
+    "recommended_action": {
+      "action_id": "restart_service",
+      "params": {
+        "service": "redis"
+      }
+    }
+  },
+  "plans": [
+    {
+      "plan_id": "PL-0001",
+      "incident_id": "INC-0001",
+      "action_id": "restart_service",
+      "params": {
+        "service": "redis"
+      },
+      "risk_class": "low",
+      "origin": "rule",
+      "evidence_refs": [
+        "EV-001",
+        "EV-003"
+      ],
+      "rationale": "Top-ranked cause is redis unavailability; a restart is the catalogue remedy",
+      "created_at": "2026-11-02T09:00:27Z",
+      "plan_hash": "sha256:ffe7c3dd9719a68332a207801d7b961b4db4dc436907a1e3ea3985dc63bd8a38"
+    }
+  ],
+  "decisions": [
+    {
+      "decision_id": "DEC-0001",
+      "plan_id": "PL-0001",
+      "plan_hash": "sha256:ffe7c3dd9719a68332a207801d7b961b4db4dc436907a1e3ea3985dc63bd8a38",
+      "l1": {
+        "result": "pass",
+        "rule_ids": [
+          "I-01",
+          "I-02",
+          "I-03",
+          "I-04",
+          "I-05"
+        ]
+      },
+      "l2": {
+        "result": "allow",
+        "rule_ids": [
+          "C-DEFAULT"
+        ],
+        "bundle_revision": "r1",
+        "bundle_signed": true
+      },
+      "final": "allow",
+      "reasons": [
+        "catalogue action",
+        "sandbox target",
+        "low risk",
+        "within attempt budget",
+        "evidence precondition met"
+      ],
+      "invariants_version": "inv-0.1",
+      "decided_at": "2026-11-02T09:00:28Z"
+    }
+  ],
+  "executions": [
+    {
+      "execution_id": "EX-0001",
+      "plan_id": "PL-0001",
+      "idempotency_key": "idem-0001-a",
+      "started_at": "2026-11-02T09:00:29Z",
+      "ended_at": "2026-11-02T09:00:31Z",
+      "result": "success",
+      "executed_argv": [
+        "docker",
+        "restart",
+        "cd-redis"
+      ],
+      "detail": "container restarted"
+    }
+  ],
+  "verifications": [
+    {
+      "incident_id": "INC-0001",
+      "execution_id": "EX-0001",
+      "verdict": "recovered",
+      "window_start": "2026-11-02T09:00:35Z",
+      "window_end": "2026-11-02T09:01:05Z",
+      "checks": [
+        {
+          "name": "readiness",
+          "passed": true
+        },
+        {
+          "name": "dependencies",
+          "passed": true
+        },
+        {
+          "name": "error_sli",
+          "passed": true,
+          "baseline": 0.002,
+          "pre_action": 0.43,
+          "post_action": 0.004
+        },
+        {
+          "name": "latency_sli",
+          "passed": true
+        },
+        {
+          "name": "synthetic_transaction",
+          "passed": true
+        },
+        {
+          "name": "no_regression",
+          "passed": true
+        },
+        {
+          "name": "telemetry_fresh",
+          "passed": true
+        }
+      ]
+    }
+  ],
+  "outcome": {
+    "mitigated": true,
+    "root_cause_confirmed": false,
+    "escalated": false
+  },
+  "limitations": [
+    "root cause of the redis stop is unknown",
+    "single run; no statistical claim"
+  ]
+}
