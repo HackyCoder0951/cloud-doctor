@@ -1,0 +1,19 @@
+{
+  "incident_id": "INC-0001",
+  "state": "recovered",
+  "opened_at": "2026-11-02T09:00:18Z",
+  "closed_at": "2026-11-02T09:01:10Z",
+  "severity": "high",
+  "services": [
+    "redis",
+    "api",
+    "worker"
+  ],
+  "symptoms": [
+    "api 5xx ratio above threshold",
+    "worker queue depth rising",
+    "redis target down"
+  ],
+  "outcome": "mitigated",
+  "root_cause_confirmed": false
+}
