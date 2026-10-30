@@ -1,0 +1,40 @@
+{
+  "incident_id": "INC-0001",
+  "execution_id": "EX-0001",
+  "verdict": "recovered",
+  "window_start": "2026-11-02T09:00:35Z",
+  "window_end": "2026-11-02T09:01:05Z",
+  "checks": [
+    {
+      "name": "readiness",
+      "passed": true
+    },
+    {
+      "name": "dependencies",
+      "passed": true
+    },
+    {
+      "name": "error_sli",
+      "passed": true,
+      "baseline": 0.002,
+      "pre_action": 0.43,
+      "post_action": 0.004
+    },
+    {
+      "name": "latency_sli",
+      "passed": true
+    },
+    {
+      "name": "synthetic_transaction",
+      "passed": true
+    },
+    {
+      "name": "no_regression",
+      "passed": true
+    },
+    {
+      "name": "telemetry_fresh",
+      "passed": true
+    }
+  ]
+}
