@@ -1,0 +1,38 @@
+# Thresholds, timings and N are PROVISIONAL design values (nothing here is measured).
+# ground_truth/fault/accepted_remediation are HARNESS-ONLY: never sent to the Cloud Doctor API.
+schema_version: 1
+id: EXP-03
+status: designed
+title: "CPU saturation"
+objective: "Test detection of a gradual, resource-driven degradation and whether a proportionate action is chosen rather than a reflexive restart."
+design_doc: docs/11-experiments/cpu-saturation.md
+is_control: false
+targets: [api]
+affected_services: [api]
+fault:
+  type: cpu_hog
+  target: api
+  params: {duration_seconds: 300}
+  persistent: false
+timing: {baseline_seconds: 60, baseline_timeout_seconds: 300, max_duration_seconds: 900, detection_deadline_seconds: 240, poll_seconds: 2, settle_seconds: 30}
+abort: {max_unhealthy_services: 2, max_action_services: 1, max_executions: 3}
+steady_state:
+  - {service: api, sli: error_ratio, op: "<=", threshold: 0.01}
+  - {service: api, sli: latency_p95_seconds, op: "<=", threshold: 0.5}
+  - {service: worker, sli: queue_depth, op: "<=", threshold: 100}
+ground_truth:
+  cause_equivalence_class: [api_cpu_saturation, cpu_saturation]
+  cause_service: api
+  decoy_causes: []
+accepted_remediation:
+  outcome: mitigated
+  actions:
+    - {action_id: restart_service, service: api}
+max_attempts: 2
+recoverability:
+  required_signals:
+    - {id: api_latency_p95, source: metric, service: api, name: latency_p95_seconds, visibility: api, required: true, supports: cause, description: "p95 latency rises before errors"}
+    - {id: api_cpu_usage, source: metric, service: api, name: cpu_usage, visibility: backend_internal, required: true, supports: cause, description: "CPU usage near limit (assumes a process/container CPU metric on the api scrape target; unverified)"}
+    - {id: api_throughput_flat, source: metric, service: api, name: throughput_rps, visibility: api, required: true, supports: cause, description: "request rate flat, contradicting a traffic spike"}
+variants: {llm: ["off", "on"], log_noise: ["off", "on"]}
+repetitions: 5

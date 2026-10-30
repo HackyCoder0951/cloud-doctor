@@ -1,0 +1,38 @@
+# Thresholds, timings and N are PROVISIONAL design values (nothing here is measured).
+# ground_truth/fault/accepted_remediation are HARNESS-ONLY: never sent to the Cloud Doctor API.
+schema_version: 1
+id: EXP-07
+status: designed
+title: "Bad deployment"
+objective: "Test change-aware diagnosis and the rollback action: rollback is the right action, a restart alone would not help."
+design_doc: docs/11-experiments/bad-deployment.md
+is_control: false
+targets: [api]
+affected_services: [api]
+fault:
+  type: bad_deployment
+  target: api
+  params: {service: api, new_tag: v2-bad, previous_tag: v1}
+  persistent: false
+timing: {baseline_seconds: 60, baseline_timeout_seconds: 300, max_duration_seconds: 600, detection_deadline_seconds: 120, poll_seconds: 2, settle_seconds: 30}
+abort: {max_unhealthy_services: 2, max_action_services: 1, max_executions: 3}
+steady_state:
+  - {service: api, sli: error_ratio, op: "<=", threshold: 0.01}
+  - {service: api, sli: latency_p95_seconds, op: "<=", threshold: 0.5}
+  - {service: worker, sli: queue_depth, op: "<=", threshold: 100}
+ground_truth:
+  cause_equivalence_class: [bad_deployment, api_bad_deployment]
+  cause_service: api
+  decoy_causes: []
+accepted_remediation:
+  outcome: mitigated
+  actions:
+    - {action_id: rollback_service, service: api}
+max_attempts: 2
+recoverability:
+  required_signals:
+    - {id: api_deploy_event, source: event, service: api, name: deploy_event, visibility: api, required: true, supports: cause, description: "container recreate / deploy event for api"}
+    - {id: api_error_ratio, source: metric, service: api, name: error_ratio, visibility: api, required: true, supports: cause, description: "errors rise from the moment of change"}
+    - {id: api_new_error_signature_logs, source: log, service: api, visibility: api, required: true, supports: cause, description: "new error messages absent before the change"}
+variants: {llm: ["off", "on"], log_noise: ["off", "on"]}
+repetitions: 5

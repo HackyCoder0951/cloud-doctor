@@ -1,0 +1,40 @@
+# Thresholds, timings and N are PROVISIONAL design values (nothing here is measured).
+# ground_truth/fault/accepted_remediation are HARNESS-ONLY: never sent to the Cloud Doctor API.
+schema_version: 1
+id: EXP-01
+status: designed
+title: "Redis outage"
+objective: "Test whether Cloud Doctor distinguishes a failed dependency (cause) from downstream symptoms, restores service via a bounded action, and verifies recovery beyond the container running."
+design_doc: docs/11-experiments/redis-failure.md
+is_control: false
+targets: [redis]
+affected_services: [redis, api, worker]
+fault:
+  type: container_stop
+  target: redis
+  params: {}
+  persistent: false
+timing: {baseline_seconds: 60, baseline_timeout_seconds: 300, max_duration_seconds: 600, detection_deadline_seconds: 120, poll_seconds: 2, settle_seconds: 30}
+abort: {max_unhealthy_services: 4, max_action_services: 1, max_executions: 3}
+steady_state:
+  - {service: api, sli: error_ratio, op: "<=", threshold: 0.01}
+  - {service: api, sli: latency_p95_seconds, op: "<=", threshold: 0.5}
+  - {service: worker, sli: queue_depth, op: "<=", threshold: 100}
+ground_truth:
+  cause_equivalence_class: [redis_unavailable, redis_container_stopped]
+  cause_service: redis
+  decoy_causes: []
+accepted_remediation:
+  outcome: mitigated
+  actions:
+    - {action_id: restart_service, service: redis}
+max_attempts: 2
+recoverability:
+  required_signals:
+    - {id: redis_target_down, source: metric, service: redis, name: up, visibility: api, required: true, supports: cause, description: "redis target up=0"}
+    - {id: api_error_ratio, source: metric, service: api, name: error_ratio, visibility: api, required: true, supports: cause, description: "api error ratio rises"}
+    - {id: api_redis_conn_refused_logs, source: log, service: api, visibility: api, required: true, supports: cause, description: "api logs show connection refused to redis"}
+    - {id: api_depends_on_redis, source: topology, service: api, to: redis, visibility: api, required: true, supports: cause, description: "dependency edge api->redis"}
+    - {id: redis_container_event, source: event, service: redis, name: container_event, visibility: api, required: false, supports: cause, description: "container stopped event"}
+variants: {llm: ["off", "on"], log_noise: ["off", "on"]}
+repetitions: 5

@@ -1,0 +1,37 @@
+# Thresholds, timings and N are PROVISIONAL design values (nothing here is measured).
+# ground_truth/fault/accepted_remediation are HARNESS-ONLY: never sent to the Cloud Doctor API.
+schema_version: 1
+id: EXP-12
+status: draft
+draft_note: "DRAFT candidate (experiment-framework.md, not counted among the ten, not designed in detail). Injection (telemetry_outage) is not implemented and the telemetry components are not catalog services."
+title: "Telemetry pipeline outage (DRAFT)"
+objective: "Test UNKNOWN handling: Prometheus and/or Loki unavailable while services run. Expected: collection-failure diagnosis, the three missing-signal states, and no remediation from missing data."
+design_doc: docs/11-experiments/experiment-framework.md
+is_control: false
+targets: []
+affected_services: [api]
+fault:
+  type: telemetry_outage
+  target: null
+  params: {component: prometheus}
+  persistent: false
+timing: {baseline_seconds: 60, baseline_timeout_seconds: 300, max_duration_seconds: 600, detection_deadline_seconds: 180, poll_seconds: 2, settle_seconds: 30}
+abort: {max_unhealthy_services: 2, max_action_services: 0, max_executions: 0}
+steady_state:
+  - {service: api, sli: error_ratio, op: "<=", threshold: 0.01}
+  - {service: api, sli: latency_p95_seconds, op: "<=", threshold: 0.5}
+  - {service: worker, sli: queue_depth, op: "<=", threshold: 100}
+ground_truth:
+  cause_equivalence_class: [telemetry_collection_failure, collection_failed]
+  cause_service: null
+  decoy_causes: [api_unavailable, redis_unavailable]
+accepted_remediation:
+  outcome: no_action
+  actions: []
+max_attempts: 1
+recoverability:
+  required_signals:
+    - {id: prometheus_dependency_down, source: status, name: prometheus, visibility: api, required: true, supports: cause, description: "GET /status reports the prometheus dependency down"}
+    - {id: collection_failed_state, source: status, name: missing_signal_state, visibility: api, required: true, supports: cause, description: "services report missing_signal_state=collection_failed"}
+variants: {llm: ["off", "on"], log_noise: ["off", "on"]}
+repetitions: 3

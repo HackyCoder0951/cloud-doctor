@@ -1,0 +1,38 @@
+# Thresholds, timings and N are PROVISIONAL design values (nothing here is measured).
+# ground_truth/fault/accepted_remediation are HARNESS-ONLY: never sent to the Cloud Doctor API.
+schema_version: 1
+id: EXP-11
+status: draft
+draft_note: "DRAFT candidate (experiment-framework.md, not counted among the ten, not designed in detail). Injection (disk_fill) is not implemented; the catalog has no disk metric target, so the cause is currently NOT recoverable from visible telemetry."
+title: "Disk full (DRAFT)"
+objective: "Test resource-saturation handling when a filesystem fills: a restart does not help; the correct output is escalation or a catalogued cleanup."
+design_doc: docs/11-experiments/experiment-framework.md
+is_control: false
+targets: [api]
+affected_services: [api]
+fault:
+  type: disk_fill
+  target: api
+  params: {fill_mb: 512}
+  persistent: false
+timing: {baseline_seconds: 60, baseline_timeout_seconds: 300, max_duration_seconds: 600, detection_deadline_seconds: 180, poll_seconds: 2, settle_seconds: 30}
+abort: {max_unhealthy_services: 2, max_action_services: 1, max_executions: 2}
+steady_state:
+  - {service: api, sli: error_ratio, op: "<=", threshold: 0.01}
+  - {service: api, sli: latency_p95_seconds, op: "<=", threshold: 0.5}
+  - {service: worker, sli: queue_depth, op: "<=", threshold: 100}
+ground_truth:
+  cause_equivalence_class: [disk_full, filesystem_exhaustion]
+  cause_service: api
+  decoy_causes: []
+accepted_remediation:
+  outcome: escalated
+  actions:
+    - {action_id: escalate, service: api}
+max_attempts: 2
+recoverability:
+  required_signals:
+    - {id: api_disk_usage, source: metric, service: api, name: disk_usage, visibility: unavailable_in_mvp, required: true, supports: cause, description: "filesystem usage near 100% (no disk metric target in the catalog)"}
+    - {id: api_write_error_logs, source: log, service: api, visibility: api, required: false, supports: cause, description: "no space left on device errors"}
+variants: {llm: ["off", "on"], log_noise: ["off", "on"]}
+repetitions: 3

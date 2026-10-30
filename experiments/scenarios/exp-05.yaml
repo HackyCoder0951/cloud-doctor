@@ -1,0 +1,39 @@
+# Thresholds, timings and N are PROVISIONAL design values (nothing here is measured).
+# ground_truth/fault/accepted_remediation are HARNESS-ONLY: never sent to the Cloud Doctor API.
+schema_version: 1
+id: EXP-05
+status: designed
+title: "Database connection exhaustion"
+objective: "Test diagnosis when the dependency process is up but saturated and restarting the victim does not fix the cause. Injection (connection_hog) is NOT implemented by DockerInjector yet."
+design_doc: docs/11-experiments/database-failure.md
+is_control: false
+targets: [worker]
+affected_services: [app-db, api, worker]
+fault:
+  type: connection_hog
+  target: worker
+  params: {connections: 100, hold_seconds: 300}
+  persistent: false
+timing: {baseline_seconds: 60, baseline_timeout_seconds: 300, max_duration_seconds: 600, detection_deadline_seconds: 120, poll_seconds: 2, settle_seconds: 30}
+abort: {max_unhealthy_services: 3, max_action_services: 1, max_executions: 3}
+steady_state:
+  - {service: api, sli: error_ratio, op: "<=", threshold: 0.01}
+  - {service: api, sli: latency_p95_seconds, op: "<=", threshold: 0.5}
+  - {service: worker, sli: queue_depth, op: "<=", threshold: 100}
+ground_truth:
+  cause_equivalence_class: [db_connection_exhaustion, connection_pool_exhausted]
+  cause_service: app-db
+  decoy_causes: []
+accepted_remediation:
+  outcome: mitigated
+  actions:
+    - {action_id: restart_service, service: worker}
+max_attempts: 2
+recoverability:
+  required_signals:
+    - {id: db_connections_gauge, source: metric, service: app-db, name: connections, visibility: backend_internal, required: true, supports: cause, description: "connection gauge near max (assumes a postgres exporter metric on the app-db scrape target; unverified)"}
+    - {id: api_too_many_connections_logs, source: log, service: api, visibility: api, required: true, supports: cause, description: "too many connections errors in api logs"}
+    - {id: app_db_process_up, source: metric, service: app-db, name: up, visibility: api, required: true, supports: cause, description: "db up=1 contradicts a dependency-down hypothesis"}
+    - {id: per_client_connection_counts, source: metric, service: app-db, name: connections_by_client, visibility: unavailable_in_mvp, required: true, supports: action, description: "per-client connection attribution needed to pick the leaker; not a standard exporter metric"}
+variants: {llm: ["off", "on"], log_noise: ["off", "on"]}
+repetitions: 5
