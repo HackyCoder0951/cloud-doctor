@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cloud-doctor.local/schemas/report.json",
+  "title": "Recovery report",
+  "description": "Machine-readable incident report. 'mitigated' (service restored) is deliberately separate from 'root_cause_confirmed'. mode is 'deterministic' unless an LLM explanation was accepted by the grounding validator.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_at", "generator", "incident", "timeline", "evidence_ids", "diagnosis", "plans", "decisions", "executions", "verifications", "outcome", "limitations"],
+  "properties": {
+    "schema_version": {"const": "1"},
+    "generated_at": {"$ref": "common.json#/$defs/timestamp"},
+    "generator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "version"],
+      "properties": {"mode": {"enum": ["deterministic", "llm_assisted"]}, "version": {"type": "string"}}
+    },
+    "incident": {"$ref": "incident.json"},
+    "timeline": {"type": "array", "items": {"$ref": "incident.json#/$defs/timeline_event"}},
+    "evidence_ids": {"type": "array", "items": {"$ref": "common.json#/$defs/evidence_id"}},
+    "diagnosis": {"$ref": "diagnosis.json"},
+    "plans": {"type": "array", "items": {"$ref": "plan.json"}},
+    "decisions": {"type": "array", "items": {"$ref": "decision.json"}},
+    "executions": {"type": "array", "items": {"$ref": "execution.json"}},
+    "verifications": {"type": "array", "items": {"$ref": "verification.json"}},
+    "outcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mitigated", "root_cause_confirmed", "escalated"],
+      "properties": {"mitigated": {"type": "boolean"}, "root_cause_confirmed": {"type": "boolean"}, "escalated": {"type": "boolean"}}
+    },
+    "limitations": {"type": "array", "items": {"type": "string"}}
+  }
+}
