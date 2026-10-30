@@ -1,0 +1,97 @@
+{
+  "incident_id": "INC-0001",
+  "generated_at": "2026-11-02T09:00:26Z",
+  "origin": "rule",
+  "engine_version": "rca-0.1",
+  "hypotheses": [
+    {
+      "rank": 1,
+      "cause_id": "redis_unavailable",
+      "service": "redis",
+      "description": "Redis is down; api and worker failures are downstream symptoms",
+      "confidence": 0.82,
+      "confidence_basis": [
+        "target down",
+        "error logs name redis",
+        "dependency edge api->redis"
+      ],
+      "status": "supported",
+      "claims": [
+        {
+          "text": "redis target reports down",
+          "type": "observation",
+          "evidence": [
+            "EV-001"
+          ]
+        },
+        {
+          "text": "api logs show connection refused to redis",
+          "type": "observation",
+          "evidence": [
+            "EV-003"
+          ]
+        },
+        {
+          "text": "api errors rose after the redis target went down",
+          "type": "temporal_correlation",
+          "evidence": [
+            "EV-001",
+            "EV-002"
+          ]
+        }
+      ],
+      "contradicting": [
+        {
+          "text": "app database is healthy",
+          "type": "observation",
+          "evidence": [
+            "EV-005"
+          ]
+        }
+      ],
+      "alternatives": [
+        "api_bug",
+        "network_partition"
+      ],
+      "unknowns": [
+        "why redis stopped"
+      ]
+    },
+    {
+      "rank": 2,
+      "cause_id": "api_bug",
+      "service": "api",
+      "description": "Defect in the api service",
+      "confidence": 0.09,
+      "status": "candidate",
+      "claims": [
+        {
+          "text": "api error ratio is elevated",
+          "type": "observation",
+          "evidence": [
+            "EV-002"
+          ]
+        }
+      ],
+      "contradicting": [
+        {
+          "text": "api errors name redis connection failures",
+          "type": "observation",
+          "evidence": [
+            "EV-003"
+          ]
+        }
+      ],
+      "alternatives": [],
+      "unknowns": [
+        "no recent deploy evidence collected"
+      ]
+    }
+  ],
+  "recommended_action": {
+    "action_id": "restart_service",
+    "params": {
+      "service": "redis"
+    }
+  }
+}
