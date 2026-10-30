@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cloud-doctor.local/schemas/diagnosis.json",
+  "title": "Diagnosis",
+  "description": "Ranked hypotheses with supporting and contradicting evidence. Every claim must cite at least one existing evidence ID. A hypothesis may only reach status 'confirmed' through the verifier or experiment ground truth, never from temporal order alone.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["incident_id", "generated_at", "origin", "hypotheses"],
+  "properties": {
+    "incident_id": {"$ref": "common.json#/$defs/incident_id"},
+    "generated_at": {"$ref": "common.json#/$defs/timestamp"},
+    "origin": {"$ref": "common.json#/$defs/origin"},
+    "engine_version": {"type": "string"},
+    "hypotheses": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["rank", "cause_id", "description", "confidence", "status", "claims", "contradicting", "alternatives", "unknowns"],
+        "properties": {
+          "rank": {"type": "integer", "minimum": 1},
+          "cause_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{2,60}$"},
+          "service": {"$ref": "common.json#/$defs/service_name"},
+          "description": {"type": "string", "maxLength": 500},
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "confidence_basis": {"type": "array", "items": {"type": "string"}},
+          "status": {"enum": ["candidate", "supported", "refuted", "confirmed"]},
+          "claims": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/claim"}},
+          "contradicting": {"type": "array", "items": {"$ref": "#/$defs/claim"}},
+          "alternatives": {"type": "array", "items": {"type": "string"}},
+          "unknowns": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "recommended_action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action_id", "params"],
+      "properties": {
+        "action_id": {"$ref": "common.json#/$defs/action_id"},
+        "params": {"type": "object"}
+      }
+    }
+  },
+  "$defs": {
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "type", "evidence"],
+      "properties": {
+        "text": {"type": "string", "maxLength": 500},
+        "type": {"$ref": "common.json#/$defs/claim_type"},
+        "evidence": {"type": "array", "minItems": 1, "items": {"$ref": "common.json#/$defs/evidence_id"}}
+      }
+    }
+  }
+}
