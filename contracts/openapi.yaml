@@ -1,0 +1,400 @@
+openapi: 3.1.0
+info:
+  title: Cloud Doctor API
+  version: "1.0.0"
+  description: >
+    Frozen contract v1 between the Python backend and the Next.js dashboard.
+    Rules: planning and execution are system-initiated; a human can only approve or reject an
+    existing plan. All mutating calls require authentication and an Idempotency-Key. Evidence and
+    log text is UNTRUSTED and must be rendered as escaped plain text only. Changes go through
+    docs/dev/contract-change-requests/.
+servers:
+  - url: /api/v1
+security:
+  - sessionCookie: []
+tags:
+  - {name: auth}
+  - {name: services}
+  - {name: incidents}
+  - {name: remediation}
+  - {name: audit}
+  - {name: system}
+paths:
+  /auth/login:
+    post:
+      tags: [auth]
+      operationId: login
+      security: []
+      summary: Exchange the shared MVP token for a session cookie (HttpOnly, Secure, SameSite=Lax) set by the API.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [token]
+              properties: {token: {type: string, minLength: 8, maxLength: 256}}
+      responses:
+        "204": {description: Session cookie set}
+        "401": {$ref: "#/components/responses/Error"}
+        "429": {$ref: "#/components/responses/Error"}
+  /auth/logout:
+    post:
+      tags: [auth]
+      operationId: logout
+      responses:
+        "204": {description: Session cleared}
+  /services:
+    get:
+      tags: [services]
+      operationId: listServices
+      summary: Services with current health state (including UNKNOWN).
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: array, items: {$ref: "#/components/schemas/ServiceHealth"}}
+        "401": {$ref: "#/components/responses/Error"}
+  /services/{service}/health:
+    parameters: [{$ref: "#/components/parameters/Service"}]
+    get:
+      tags: [services]
+      operationId: getServiceHealth
+      responses:
+        "200":
+          description: OK
+          content: {application/json: {schema: {$ref: "#/components/schemas/ServiceHealth"}}}
+        "404": {$ref: "#/components/responses/Error"}
+  /services/{service}/metrics:
+    parameters:
+      - {$ref: "#/components/parameters/Service"}
+      - {name: name, in: query, required: true, schema: {type: string, enum: [error_ratio, latency_p95_seconds, throughput_rps, queue_depth, up]}}
+      - {name: since_seconds, in: query, schema: {type: integer, minimum: 30, maximum: 3600, default: 600}}
+    get:
+      tags: [services]
+      operationId: getServiceMetric
+      summary: Downsampled series for sparklines (served from Prometheus by the backend).
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [service, name, points, status]
+                properties:
+                  service: {type: string}
+                  name: {type: string}
+                  status: {$ref: "./schemas/common.json#/$defs/evidence_status"}
+                  points:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: false
+                      required: [t, v]
+                      properties: {t: {type: string, format: date-time}, v: {type: number}}
+  /services/{service}/logs:
+    parameters:
+      - {$ref: "#/components/parameters/Service"}
+      - {name: since_seconds, in: query, schema: {type: integer, minimum: 30, maximum: 3600, default: 300}}
+      - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 500, default: 100}}
+    get:
+      tags: [services]
+      operationId: getServiceLogs
+      summary: Recent log lines. UNTRUSTED text.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [service, status, lines]
+                properties:
+                  service: {type: string}
+                  status: {$ref: "./schemas/common.json#/$defs/evidence_status"}
+                  lines:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: false
+                      required: [t, line]
+                      properties: {t: {type: string, format: date-time}, line: {type: string, maxLength: 2000}, level: {type: string}}
+  /topology:
+    get:
+      tags: [services]
+      operationId: getTopology
+      summary: Dependency graph generated from the service catalog.
+      responses:
+        "200":
+          description: OK
+          content: {application/json: {schema: {$ref: "#/components/schemas/Topology"}}}
+  /incidents:
+    get:
+      tags: [incidents]
+      operationId: listIncidents
+      parameters:
+        - {name: state, in: query, schema: {$ref: "./schemas/common.json#/$defs/incident_state"}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 200, default: 50}}
+      responses:
+        "200":
+          description: OK
+          content: {application/json: {schema: {type: array, items: {$ref: "./schemas/incident.json"}}}}
+  /incidents/{incident}:
+    parameters: [{$ref: "#/components/parameters/Incident"}]
+    get:
+      tags: [incidents]
+      operationId: getIncident
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "./schemas/incident.json"}}}}
+        "404": {$ref: "#/components/responses/Error"}
+  /incidents/{incident}/timeline:
+    parameters: [{$ref: "#/components/parameters/Incident"}]
+    get:
+      tags: [incidents]
+      operationId: getTimeline
+      summary: Events ordered by event_time; collected_at retained.
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {type: array, items: {$ref: "./schemas/incident.json#/$defs/timeline_event"}}}}}
+  /incidents/{incident}/evidence:
+    parameters: [{$ref: "#/components/parameters/Incident"}]
+    get:
+      tags: [incidents]
+      operationId: getEvidence
+      summary: Evidence records. Log payloads are UNTRUSTED.
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {type: array, items: {$ref: "./schemas/evidence.json"}}}}}
+  /incidents/{incident}/diagnosis:
+    parameters: [{$ref: "#/components/parameters/Incident"}]
+    get:
+      tags: [incidents]
+      operationId: getDiagnosis
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "./schemas/diagnosis.json"}}}}
+        "404": {$ref: "#/components/responses/Error"}
+  /incidents/{incident}/diagnose:
+    parameters: [{$ref: "#/components/parameters/Incident"}, {$ref: "#/components/parameters/IdempotencyKey"}]
+    post:
+      tags: [incidents]
+      operationId: rediagnose
+      summary: Re-run deterministic diagnosis (operator role). Idempotent.
+      responses:
+        "202": {description: Accepted}
+        "403": {$ref: "#/components/responses/Error"}
+  /incidents/{incident}/remediation:
+    parameters: [{$ref: "#/components/parameters/Incident"}]
+    get:
+      tags: [remediation]
+      operationId: getRemediation
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [plans, decisions, executions]
+                properties:
+                  plans: {type: array, items: {$ref: "./schemas/plan.json"}}
+                  decisions: {type: array, items: {$ref: "./schemas/decision.json"}}
+                  executions: {type: array, items: {$ref: "./schemas/execution.json"}}
+                  circuit_breaker: {type: string, enum: [closed, open, half_open]}
+                  attempts_remaining: {type: integer, minimum: 0}
+  /incidents/{incident}/remediation/plans/{plan}/approve:
+    parameters: [{$ref: "#/components/parameters/Incident"}, {$ref: "#/components/parameters/Plan"}, {$ref: "#/components/parameters/IdempotencyKey"}]
+    post:
+      tags: [remediation]
+      operationId: approvePlan
+      summary: Approve a medium-risk plan (operator role). Bound to plan_hash; policy is re-evaluated at execution.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [plan_hash, reason]
+              properties:
+                plan_hash: {$ref: "./schemas/common.json#/$defs/sha256"}
+                reason: {type: string, minLength: 3, maxLength: 300}
+      responses:
+        "200": {description: Approved and queued, content: {application/json: {schema: {$ref: "./schemas/decision.json"}}}}
+        "403": {$ref: "#/components/responses/Error"}
+        "409": {$ref: "#/components/responses/Error"}
+  /incidents/{incident}/remediation/plans/{plan}/reject:
+    parameters: [{$ref: "#/components/parameters/Incident"}, {$ref: "#/components/parameters/Plan"}, {$ref: "#/components/parameters/IdempotencyKey"}]
+    post:
+      tags: [remediation]
+      operationId: rejectPlan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reason]
+              properties: {reason: {type: string, minLength: 3, maxLength: 300}}
+      responses:
+        "200": {description: Rejected}
+        "409": {$ref: "#/components/responses/Error"}
+  /incidents/{incident}/verification:
+    parameters: [{$ref: "#/components/parameters/Incident"}]
+    get:
+      tags: [remediation]
+      operationId: getVerification
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {type: array, items: {$ref: "./schemas/verification.json"}}}}}
+  /incidents/{incident}/report:
+    parameters: [{$ref: "#/components/parameters/Incident"}]
+    get:
+      tags: [incidents]
+      operationId: getReport
+      responses:
+        "200":
+          description: JSON report, or a rendered Markdown report when Accept is text/markdown.
+          content:
+            application/json: {schema: {$ref: "./schemas/report.json"}}
+            text/markdown: {schema: {type: string}}
+  /audit:
+    get:
+      tags: [audit]
+      operationId: listAudit
+      parameters:
+        - {name: incident, in: query, schema: {$ref: "./schemas/common.json#/$defs/incident_id"}}
+        - {name: after_seq, in: query, schema: {type: integer, minimum: 0, default: 0}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 500, default: 100}}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [chain_valid, events]
+                properties:
+                  chain_valid: {type: boolean}
+                  events: {type: array, items: {$ref: "./schemas/audit_event.json"}}
+  /stream:
+    get:
+      tags: [system]
+      operationId: eventStream
+      summary: Server-sent events. Each data field is JSON of StreamEvent. Reconnect with Last-Event-ID.
+      responses:
+        "200":
+          description: text/event-stream
+          content:
+            text/event-stream:
+              schema: {$ref: "#/components/schemas/StreamEvent"}
+  /status:
+    get:
+      tags: [system]
+      operationId: getStatus
+      summary: Self-health and degraded-mode state of Cloud Doctor itself.
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [state, dependencies]
+                properties:
+                  state: {type: string, enum: [ok, degraded, fail_closed]}
+                  dependencies:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: false
+                      required: [name, state]
+                      properties:
+                        name: {type: string, enum: [prometheus, logs, database, actuator, policy_layer2, llm]}
+                        state: {type: string, enum: [up, down, disabled, unknown]}
+                        detail: {type: string}
+components:
+  securitySchemes:
+    sessionCookie: {type: apiKey, in: cookie, name: cd_session}
+  parameters:
+    Service: {name: service, in: path, required: true, schema: {$ref: "./schemas/common.json#/$defs/service_name"}}
+    Incident: {name: incident, in: path, required: true, schema: {$ref: "./schemas/common.json#/$defs/incident_id"}}
+    Plan: {name: plan, in: path, required: true, schema: {$ref: "./schemas/common.json#/$defs/plan_id"}}
+    IdempotencyKey: {name: Idempotency-Key, in: header, required: true, schema: {type: string, pattern: "^[A-Za-z0-9_-]{8,64}$"}}
+  responses:
+    Error:
+      description: Error. 403 policy/authorization denials return rule ids, never internals; 503 carries degraded detail (fail closed).
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/Error"}
+  schemas:
+    Error:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code: {type: string}
+        message: {type: string}
+        rule_ids: {type: array, items: {type: string}}
+    ServiceHealth:
+      type: object
+      additionalProperties: false
+      required: [name, kind, state, missing_signal_state, updated_at, open_incident_ids]
+      properties:
+        name: {$ref: "./schemas/common.json#/$defs/service_name"}
+        kind: {type: string}
+        state: {$ref: "./schemas/common.json#/$defs/health_state"}
+        missing_signal_state: {$ref: "./schemas/common.json#/$defs/missing_signal_state"}
+        slis:
+          type: object
+          additionalProperties: false
+          properties:
+            availability: {type: number, minimum: 0, maximum: 1}
+            error_ratio: {type: number, minimum: 0, maximum: 1}
+            latency_p95_seconds: {type: number, minimum: 0}
+            throughput_rps: {type: number, minimum: 0}
+            queue_depth: {type: number, minimum: 0}
+        dependencies:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [service, state]
+            properties: {service: {type: string}, state: {$ref: "./schemas/common.json#/$defs/health_state"}}
+        updated_at: {type: string, format: date-time}
+        open_incident_ids: {type: array, items: {$ref: "./schemas/common.json#/$defs/incident_id"}}
+    Topology:
+      type: object
+      additionalProperties: false
+      required: [nodes, edges]
+      properties:
+        nodes:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [name, kind, state]
+            properties: {name: {type: string}, kind: {type: string}, state: {$ref: "./schemas/common.json#/$defs/health_state"}}
+        edges:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [from, to, kind]
+            properties: {from: {type: string}, to: {type: string}, kind: {type: string, enum: [hard, soft]}}
+    StreamEvent:
+      type: object
+      additionalProperties: false
+      required: [type, at]
+      properties:
+        type: {type: string, enum: [service.health, incident.opened, incident.updated, timeline.event, plan.created, decision.recorded, execution.finished, verification.finished, status.changed]}
+        at: {type: string, format: date-time}
+        incident_id: {$ref: "./schemas/common.json#/$defs/incident_id"}
+        service: {type: string}
+        data: {type: object}
