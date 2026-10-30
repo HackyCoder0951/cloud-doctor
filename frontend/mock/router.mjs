@@ -84,6 +84,11 @@ export function createMock({ now = () => Date.now() } = {}) {
     const [a, b, c, d, e, f] = seg;
 
     if (method === 'GET' && a === 'status' && seg.length === 1) return json(200, status);
+    // Cookie handling lives in server.mjs; the router only validates so tests can use it directly.
+    if (method === 'POST' && a === 'auth' && b === 'login' && seg.length === 2) {
+      return typeof body?.token === 'string' && body.token.length >= 8 && body.token.length <= 256 ? json(204, null) : err(401, 'invalid_token', 'invalid token');
+    }
+    if (method === 'POST' && a === 'auth' && b === 'logout' && seg.length === 2) return json(204, null);
 
     if (method === 'GET' && a === 'services' && seg.length === 1) return json(200, SERVICES);
     if (method === 'GET' && a === 'services' && RE.service.test(b ?? '') && seg.length === 3) {

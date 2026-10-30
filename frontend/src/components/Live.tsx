@@ -1,5 +1,5 @@
 'use client';
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { API_BASE } from '@/api/client';
 import type { StreamEvent } from '@/api/types';
 import { StreamClient, type ConnState } from '@/lib/sse';
@@ -28,10 +28,10 @@ export function LiveProvider({ enabled, children, EventSourceImpl }: { enabled: 
     return () => client.stop();
   }, [enabled, EventSourceImpl]);
 
-  const value = useMemo<LiveValue>(() => ({
-    state,
-    subscribe: (l) => { listeners.current.add(l); return () => { listeners.current.delete(l); }; },
-  }), [state]);
+  // `subscribe` must keep its identity across state changes: consumers re-subscribe when it changes,
+  // which would drop a pending resync refetch scheduled right after a reconnect.
+  const subscribe = useCallback((l: Listener) => { listeners.current.add(l); return () => { listeners.current.delete(l); }; }, []);
+  const value = useMemo<LiveValue>(() => ({ state, subscribe }), [state, subscribe]);
   return <LiveContext.Provider value={value}>{children}</LiveContext.Provider>;
 }
 

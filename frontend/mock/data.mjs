@@ -4,8 +4,12 @@
 // untrusted text inertly.
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const example = (name) => JSON.parse(readFileSync(new URL(`../../contracts/examples/${name}`, import.meta.url), 'utf8'));
+// A plain path join (not new URL(..., import.meta.url)) so bundlers/test runners do not treat it as an asset import.
+const EXAMPLES_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'contracts', 'examples');
+const example = (name) => JSON.parse(readFileSync(join(EXAMPLES_DIR, name), 'utf8'));
 
 const BASE = Date.parse('2026-11-02T09:00:00Z');
 export const ts = (sec) => new Date(BASE + sec * 1000).toISOString().replace('.000Z', 'Z');

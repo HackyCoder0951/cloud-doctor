@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "description": "Cloud Doctor operator dashboard (Stream D). Next.js static export; all auth/authz is enforced by the Python API.",
-  "engines": { "node": ">=20.9.0" },
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -13,7 +15,9 @@
     "check:api": "node scripts/check-api-fresh.mjs",
     "mock": "node mock/server.mjs",
     "check:nginx": "node scripts/check-nginx.mjs",
-    "ci": "npm run check:api && npm run typecheck && npm test && npm run build && npm run check:nginx"
+    "ci": "npm run check:api && npm run scan && npm run typecheck && npm test && npm run build && npm run check:nginx",
+    "scan": "node scripts/scan-forbidden.mjs",
+    "prebuild": "node scripts/scan-forbidden.mjs"
   },
   "dependencies": {
     "next": "16.4.3",
@@ -27,6 +31,8 @@
     "@types/node": "20.19.43",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
     "jsdom": "26.1.0",
     "openapi-typescript": "7.13.0",
     "typescript": "5.9.3",
