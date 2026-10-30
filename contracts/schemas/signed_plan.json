@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cloud-doctor.local/schemas/signed_plan.json",
+  "title": "Signed plan envelope (control plane to actuator)",
+  "description": "The control plane signs the plan; the actuator verifies signature, expiry, nonce (replay) and plan_hash, then re-runs Layer 1 invariants. For the MVP the signature is HMAC-SHA256 (hex) over the canonical JSON of {plan, key_id, issued_at, expires_at, nonce, approval}, keyed from a secret file readable only by the control plane and the actuator.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["plan", "key_id", "issued_at", "expires_at", "nonce", "signature"],
+  "properties": {
+    "plan": {"$ref": "plan.json"},
+    "key_id": {"type": "string", "pattern": "^[A-Za-z0-9._-]{1,40}$"},
+    "issued_at": {"$ref": "common.json#/$defs/timestamp"},
+    "expires_at": {"$ref": "common.json#/$defs/timestamp"},
+    "nonce": {"type": "string", "pattern": "^[A-Za-z0-9_-]{16,64}$"},
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["approver", "approved_at", "plan_hash"],
+      "properties": {
+        "approver": {"type": "string", "maxLength": 80},
+        "approved_at": {"$ref": "common.json#/$defs/timestamp"},
+        "reason": {"type": "string", "maxLength": 300},
+        "plan_hash": {"$ref": "common.json#/$defs/sha256"}
+      }
+    },
+    "signature": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}
