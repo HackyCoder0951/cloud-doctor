@@ -1,0 +1,17 @@
+{
+  "plan_id": "PL-0001",
+  "incident_id": "INC-0001",
+  "action_id": "restart_service",
+  "params": {
+    "service": "redis"
+  },
+  "risk_class": "low",
+  "origin": "rule",
+  "evidence_refs": [
+    "EV-001",
+    "EV-003"
+  ],
+  "rationale": "Top-ranked cause is redis unavailability; a restart is the catalogue remedy",
+  "created_at": "2026-11-02T09:00:27Z",
+  "plan_hash": "sha256:ffe7c3dd9719a68332a207801d7b961b4db4dc436907a1e3ea3985dc63bd8a38"
+}
