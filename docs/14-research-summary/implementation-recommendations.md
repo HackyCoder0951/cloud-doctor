@@ -1,5 +1,7 @@
 # Implementation Roadmap (PLAN — nothing implemented)
 
+> **Superseded in detail by `development-plan.md`**, which reorders phases (foundation first, AI after the closed loop, incremental dashboard), adds milestones, scope tiers, effort assumptions, gates and traceability. The table below is kept as the original outline.
+
 Gate: no implementation starts until ADR-001…005 are Accepted. Acceptance requires closing the open questions in `limitations.md`.
 
 | Phase | Objective | Prerequisites | Deliverables | Tests / acceptance | Risks |
