@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cloud-doctor.local/schemas/decision.json",
+  "title": "Policy decision",
+  "description": "Result of the hybrid policy engine: Layer 1 invariants (mandatory) and Layer 2 client policy (optional). Layer 2 can only tighten. Any Layer 2 problem (unavailable, malformed, undefined/no result, stale or unsigned bundle) produces final=deny.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["decision_id", "plan_id", "plan_hash", "l1", "final", "reasons", "invariants_version", "decided_at"],
+  "properties": {
+    "decision_id": {"$ref": "common.json#/$defs/decision_id"},
+    "plan_id": {"$ref": "common.json#/$defs/plan_id"},
+    "plan_hash": {"$ref": "common.json#/$defs/sha256"},
+    "l1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["result", "rule_ids"],
+      "properties": {
+        "result": {"enum": ["pass", "deny"]},
+        "rule_ids": {"type": "array", "items": {"type": "string", "pattern": "^I-[0-9]{2}$"}}
+      }
+    },
+    "l2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["result", "rule_ids"],
+      "properties": {
+        "result": {"$ref": "common.json#/$defs/decision_result"},
+        "rule_ids": {"type": "array", "items": {"type": "string"}},
+        "bundle_revision": {"type": "string"},
+        "bundle_signed": {"type": "boolean"}
+      }
+    },
+    "final": {"$ref": "common.json#/$defs/decision_result"},
+    "reasons": {"type": "array", "items": {"type": "string", "maxLength": 300}},
+    "invariants_version": {"type": "string"},
+    "decided_at": {"$ref": "common.json#/$defs/timestamp"}
+  }
+}
