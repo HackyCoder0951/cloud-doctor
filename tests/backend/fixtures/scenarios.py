@@ -94,7 +94,7 @@ def control() -> dict:
 def redis_outage(recover_at: float | None = None, persistent: bool = False) -> dict:
     """EXP-01. Per contracts/telemetry.md: up{redis} stays 1 (probe sidecar); cd_service_up falls ~6s after the stop,
     dependency_up ~9s, queue_depth vanishes ~12s, api 5xx ratio ~1.0 ~15s."""
-    b = Builder("redis_outage" + ("_recovered" if recover_at else ""), "Redis stopped at t=60s", duration=300)
+    b = Builder("redis_outage" + ("_recovered" if recover_at else ""), "Redis stopped at t=60s", duration=400)
     T, end = 60, recover_at
     b.event(T, "container_stop", "redis", container="cd-redis")
     b.put("redis", "cd_service_up", 0, T + 5, end)
@@ -115,18 +115,22 @@ def redis_outage(recover_at: float | None = None, persistent: bool = False) -> d
     return b.build()
 
 
-def worker_crash() -> dict:
-    """EXP-02: worker exits; queue grows (redis alive); api healthy."""
-    b = Builder("worker_crash", "Worker process killed at t=60s; api healthy; queue backlog grows")
-    T = 60
+def worker_crash(recover_at: float | None = None) -> dict:
+    """EXP-02: worker exits; queue grows (redis alive); api healthy. With recover_at the worker is back from that time."""
+    b = Builder("worker_crash" + ("_recovered" if recover_at else ""), "Worker process killed at t=60s; api healthy; queue backlog grows")
+    T, end = 60, recover_at
     b.log(T - 2, "worker", "error", "job failed: unexpected exception", error="worker panic")
     b.event(T + 3, "container_stop", "worker", container="cd-worker")
-    b.put("worker", "up", 0, T + 5)
-    b.gap("worker", "start_time", T + 5)
-    b.gap("worker", "dependency_up:redis", T + 5)
-    b.gap("worker", "dependency_up:app-db", T + 5)
-    b.gap("worker", "memory_bytes", T + 5)
-    b.put("worker", "queue_depth", lambda t: 3 + (t - T) * 6, T)
+    b.put("worker", "up", 0, T + 5, end)
+    b.gap("worker", "start_time", T + 5, end)
+    b.gap("worker", "dependency_up:redis", T + 5, end)
+    b.gap("worker", "dependency_up:app-db", T + 5, end)
+    b.gap("worker", "memory_bytes", T + 5, end)
+    b.put("worker", "queue_depth", lambda t: 3 + (t - T) * 6, T, end)
+    if end:
+        b.event(end, "container_start", "worker", container="cd-worker")
+        b.put("worker", "start_time", BASE_EPOCH + end, end)
+        b.put("worker", "queue_depth", ramp(end, end + 40, 3 + (end - T) * 6, 4), end)
     return b.build()
 
 
@@ -284,6 +288,7 @@ def recovered_redis() -> dict:
 
 
 ALL["redis_outage_recovered"] = recovered_redis
+ALL["worker_crash_recovered"] = lambda: worker_crash(recover_at=145)
 
 
 def write_all(directory: Path | None = None) -> None:

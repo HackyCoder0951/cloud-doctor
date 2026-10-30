@@ -123,7 +123,7 @@ def test_self_recovered_incident_is_swept_closed(world, catalog, cfg):
         for dep in ("redis",):
             data["samples"][s][f"dependency_up:{dep}"] = [[t, 1] for t, _ in data["samples"][s][f"dependency_up:{dep}"]]
     data["samples"]["api"]["error_ratio"] = [[t, 0.004] for t, _ in data["samples"]["api"]["error_ratio"]]
-    data["samples"]["worker"]["queue_depth"] = [[t, 3] for t in range(0, 301, 5)]
+    data["samples"]["worker"]["queue_depth"] = [[t, 3] for t in range(0, 401, 5)]
     _, repo, mgr, _ = build(world, catalog, cfg, data)
     inc = repo.list_incidents()[0]
     assert inc.state == "closed" and inc.outcome == "unresolved"
