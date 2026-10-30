@@ -1,0 +1,33 @@
+{
+  "decision_id": "DEC-0001",
+  "plan_id": "PL-0001",
+  "plan_hash": "sha256:ffe7c3dd9719a68332a207801d7b961b4db4dc436907a1e3ea3985dc63bd8a38",
+  "l1": {
+    "result": "pass",
+    "rule_ids": [
+      "I-01",
+      "I-02",
+      "I-03",
+      "I-04",
+      "I-05"
+    ]
+  },
+  "l2": {
+    "result": "allow",
+    "rule_ids": [
+      "C-DEFAULT"
+    ],
+    "bundle_revision": "r1",
+    "bundle_signed": true
+  },
+  "final": "allow",
+  "reasons": [
+    "catalogue action",
+    "sandbox target",
+    "low risk",
+    "within attempt budget",
+    "evidence precondition met"
+  ],
+  "invariants_version": "inv-0.1",
+  "decided_at": "2026-11-02T09:00:28Z"
+}
