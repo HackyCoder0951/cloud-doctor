@@ -1,0 +1,16 @@
+{
+  "seq": 1,
+  "incident_id": "INC-0001",
+  "actor": "detector",
+  "event": "incident.opened",
+  "detail": {
+    "services": [
+      "redis",
+      "api",
+      "worker"
+    ]
+  },
+  "prev_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "created_at": "2026-11-02T09:00:18Z",
+  "hash": "sha256:d852f477fc6608d6a26944d62747abf2816ac2847f5caf6d9916260b9c96b8e7"
+}
