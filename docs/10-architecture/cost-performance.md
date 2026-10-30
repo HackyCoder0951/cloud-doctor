@@ -2,6 +2,8 @@
 
 **Status:** model and *illustrative* calculations. Prices are as listed on Anthropic's pricing page when read on 2026-10-31 (the page shows no "last updated" date) [S-083]; they change. Token counts below are **assumptions**, not measurements.
 
+> **Provider note (2026-10-31):** the prototype's C1 provider is NVIDIA NIM (hosted), for which per-token prices were **not found**; reported free-tier limits (~40 requests/minute, ~1,000 credits) come only from third parties and are unverified [S-126]. The per-token tables below describe another vendor's price list and serve as a **method illustration**; for NIM, budget by credits and request rate (see `docs/05-ai/llm-channels.md`).
+
 ## Cost drivers (RESEARCH FINDING where cited)
 
 | Driver | Source/notes |
