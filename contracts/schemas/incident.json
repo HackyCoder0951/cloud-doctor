@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cloud-doctor.local/schemas/incident.json",
+  "title": "Incident and timeline event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["incident_id", "state", "opened_at", "severity", "services", "symptoms"],
+  "properties": {
+    "incident_id": {"$ref": "common.json#/$defs/incident_id"},
+    "state": {"$ref": "common.json#/$defs/incident_state"},
+    "opened_at": {"$ref": "common.json#/$defs/timestamp"},
+    "closed_at": {"$ref": "common.json#/$defs/timestamp"},
+    "severity": {"enum": ["low", "medium", "high", "critical"]},
+    "services": {"type": "array", "minItems": 1, "items": {"$ref": "common.json#/$defs/service_name"}},
+    "symptoms": {"type": "array", "items": {"type": "string", "maxLength": 200}},
+    "outcome": {"enum": ["mitigated", "escalated", "unresolved"]},
+    "root_cause_confirmed": {"type": "boolean"},
+    "run_id": {"type": "string", "description": "Experiment run id when the incident occurred during a harness run. The harness ground truth is NEVER visible to the detector or RCA."}
+  },
+  "$defs": {
+    "timeline_event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_id", "incident_id", "event_time", "collected_at", "kind", "summary"],
+      "properties": {
+        "event_id": {"$ref": "common.json#/$defs/event_id"},
+        "incident_id": {"$ref": "common.json#/$defs/incident_id"},
+        "event_time": {"$ref": "common.json#/$defs/timestamp"},
+        "collected_at": {"$ref": "common.json#/$defs/timestamp"},
+        "kind": {"enum": ["alert", "metric_change", "log_burst", "container_event", "deploy_event", "diagnosis", "policy_decision", "action", "verification", "note"]},
+        "service": {"$ref": "common.json#/$defs/service_name"},
+        "summary": {"type": "string", "maxLength": 300},
+        "evidence_refs": {"type": "array", "items": {"$ref": "common.json#/$defs/evidence_id"}},
+        "suppressed": {"type": "boolean", "description": "Suppressed events still appear in the timeline; suppression affects notification only."}
+      }
+    }
+  }
+}
