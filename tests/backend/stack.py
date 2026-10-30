@@ -45,9 +45,10 @@ class Stack:
         return sorted(self.repo.list_incidents(), key=lambda i: i.opened_at)[0]
 
 
-def build(world, catalog, cfg, name_or_data, tmp_path=None, engine_cfg=None, vcfg=None, key=KEY, actuator=None, key_loader=None):
+def build(world, catalog, cfg, name_or_data, tmp_path=None, engine_cfg=None, vcfg=None, key=KEY, actuator=None, key_loader=None, repo=None):
     w = world(name_or_data)
-    repo, clock = MemoryRepository(), FakeClock(w.scenario.at(5))
+    repo, clock = repo or MemoryRepository(), FakeClock(w.scenario.at(5))
+    repo.sync_catalog(catalog)
     audit = AuditWriter(repo, clock)
     mgr = IncidentManager(repo, catalog, cfg, audit, clock)
     reg = ExpectedStateRegistry()

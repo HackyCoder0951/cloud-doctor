@@ -17,7 +17,7 @@ from backend import policy_adapter as pa
 from backend.audit import AuditWriter
 from backend.domain.clock import Clock, iso
 from backend.domain.contracts import validate_against_contract
-from backend.domain.models import Decision, Diagnosis, Execution, Plan, Verification
+from backend.domain.models import Decision, Diagnosis, Plan, Verification
 from backend.evidence import EvidenceCollector
 from backend.incidents.manager import IncidentManager, InvalidTransition
 from backend.rca.engine import RcaEngine

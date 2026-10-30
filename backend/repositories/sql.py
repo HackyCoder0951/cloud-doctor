@@ -7,7 +7,6 @@ Id allocation uses incident_seq for incidents and max()+1 elsewhere (collisions 
 from __future__ import annotations
 
 from datetime import datetime
-from pathlib import Path
 
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB

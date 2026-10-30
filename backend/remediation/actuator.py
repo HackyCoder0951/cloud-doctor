@@ -15,7 +15,7 @@ import httpx
 from backend import policy_adapter as pa
 from backend.domain.canonical import plan_hash
 from backend.domain.catalog import Catalog
-from backend.domain.clock import Clock, iso, parse_ts
+from backend.domain.clock import Clock, parse_ts
 from backend.domain.contracts import ContractViolation, validate_against_contract
 from backend.domain.models import Execution
 

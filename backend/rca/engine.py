@@ -323,7 +323,6 @@ class RcaEngine:
             c.need(False, 3, "", "observation", [], "metric", bad=f"{s} shows no symptoms after the change (availability and SLIs normal)",
                    bad_evs=self._ids(healthy, [f.ts(s, m) for m in ("error_ratio", "latency_p95", "queue_depth") if f.ts(s, m)]), bad_w=4,
                    miss=self._failed_note(f, s, "up"))
-            others = [x for x in sy if x != s and not set(self.catalog.dependents(s)) & {x} and x not in self.catalog.transitive_dependents(s)]
             reach = self.catalog.transitive_dependents(s)
             if sy and not (set(sy) & reach):
                 ev = self._ids([ts for items in sy.values() for _, _, ts in items if ts is not None][:3])

@@ -22,8 +22,7 @@ from backend.domain.clock import Clock, iso
 from backend.domain.models import Evidence
 from backend.incidents.timeline import TimelineBuilder
 from backend.repositories.base import Repository
-from backend.telemetry.base import (EMPTY, ChangeFeed, LogClient, Prober, PromClient, PromResult,
-                                    missing_signal_for)
+from backend.telemetry.base import (EMPTY, ChangeFeed, LogClient, Prober, PromClient, missing_signal_for)
 
 MAX_LINES, MAX_LINE_CHARS = 100, 500
 

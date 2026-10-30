@@ -3,24 +3,23 @@ from __future__ import annotations
 
 import os
 import threading
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
-from pathlib import Path
 
 from backend.audit import AuditWriter
 from backend.detector.config import DetectorConfig
 from backend.detector.engine import Detector
 from backend.detector.expected import ExpectedStateRegistry
 from backend.domain.catalog import Catalog
-from backend.domain.clock import Clock, FakeClock, SystemClock
+from backend.domain.clock import Clock, SystemClock
 from backend.evidence import EvidenceCollector
 from backend.incidents.manager import IncidentManager
 from backend.rca.engine import RcaEngine
-from backend.remediation.actuator import ActuatorClient, InProcessFakeActuator, UnixSocketActuatorClient
+from backend.remediation.actuator import ActuatorClient, UnixSocketActuatorClient
 from backend.remediation.engine import EngineConfig, RemediationEngine
 from backend.remediation.planner import Planner
 from backend.remediation.signing import load_key
-from backend.report import NoDiagnosis, ReportGenerator
+from backend.report import ReportGenerator
 from backend.repositories import make_repository
 from backend.repositories.base import Repository
 from backend.telemetry.base import LogClient, PromClient

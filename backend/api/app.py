@@ -26,7 +26,7 @@ from fastapi import BackgroundTasks, Depends, FastAPI, Header, Query, Request, R
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.sse import EventSourceResponse, ServerSentEvent
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, StringConstraints
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from backend import policy_adapter as pa

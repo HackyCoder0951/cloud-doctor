@@ -82,7 +82,7 @@ class ReportGenerator:
              "## Summary", "",
              f"- State: **{inc['state']}**, severity **{inc['severity']}**, opened {inc['opened_at']}" + (f", closed {inc['closed_at']}" if inc.get("closed_at") else ""),
              f"- Services: {', '.join(m(s) for s in inc['services'])}",
-             f"- Symptoms: " + "; ".join(m(s) for s in inc["symptoms"]),
+             "- Symptoms: " + "; ".join(m(s) for s in inc["symptoms"]),
              f"- **Mitigated:** {'yes' if out['mitigated'] else 'no'}  |  **Root cause confirmed:** {'yes' if out['root_cause_confirmed'] else 'no'}  |  **Escalated:** {'yes' if out['escalated'] else 'no'}",
              "", "> Mitigated (service restored) is not the same as root cause confirmed.", "", "## Timeline", "",
              "| event_time | collected_at | kind | service | summary | evidence |", "|---|---|---|---|---|---|"]

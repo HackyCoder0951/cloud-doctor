@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 from backend.audit import AuditWriter
 from backend.detector.config import DetectorConfig
 from backend.domain.catalog import Catalog
-from backend.domain.clock import Clock, iso
+from backend.domain.clock import Clock
 from backend.domain.models import Check, Verification
 from backend.evidence import EvidenceCollector
 from backend.rca.facts import Facts
@@ -82,7 +82,6 @@ class Verifier:
                prior_recovered: bool = False) -> Verification:
         action_time = action_time or self.clock.now()
         pre = Facts([e for e in self.repo.list_evidence(incident_id) if e.payload.get("phase") == "pre_action"], self.catalog)
-        baseline_at = action_time - timedelta(seconds=1)
         self.clock.sleep(self.v.settle_seconds)  # settling period after the executor returns
         window_start = self.clock.now()
         s = _Samples()

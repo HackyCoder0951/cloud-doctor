@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import dataclass, field, replace
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from backend.domain.catalog import Catalog
 from backend.domain.clock import iso
@@ -16,7 +16,7 @@ from backend.domain.models import Alert
 from backend.telemetry.base import PromClient, PromResult
 
 from .config import DetectorConfig, RuleConfig
-from .expected import Declaration, ExpectedStateRegistry
+from .expected import ExpectedStateRegistry
 
 SEVERITY_ORDER = {"HEALTHY": 0, "UNKNOWN": 1, "DEGRADED": 2, "UNHEALTHY": 3}
 

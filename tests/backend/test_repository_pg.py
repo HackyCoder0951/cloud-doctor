@@ -66,3 +66,39 @@ def test_audit_chain_enforced_by_database(repo):
     with pytest.raises(Exception):
         with repo.engine.begin() as c:
             c.execute(sa.text("DELETE FROM audit_log"))
+
+
+def test_full_replay_pipeline_on_postgres(repo):
+    """Run detector -> incident -> evidence -> RCA -> report with the PostgreSQL repository."""
+    from pathlib import Path
+
+    from backend.demo_replay import replay
+    from backend.domain.contracts import validate_against_contract
+
+    svc, sc = replay(Path(__file__).parent / "fixtures" / "redis_outage.json", 140, repo=repo)
+    inc = svc.repo.list_incidents()[0]
+    rep = svc.reports.build(inc.incident_id)
+    validate_against_contract(rep, "report")
+    assert rep["diagnosis"]["hypotheses"][0]["cause_id"] == "redis_unavailable"
+    assert svc.audit.chain_valid() and len(rep["evidence_ids"]) > 20
+    for e in svc.repo.list_evidence(inc.incident_id):
+        from backend.domain.canonical import payload_hash
+        assert e.payload_hash == payload_hash(e.payload)
+
+
+def test_full_remediation_on_postgres(repo, world, catalog, cfg):
+    from stack import build
+
+    from backend.domain.contracts import validate_against_contract
+
+    s = build(world, catalog, cfg, "worker_crash_recovered", repo=repo)
+    s.poll_until(140)
+    iid = s.incident().incident_id
+    assert s.eng.run(iid) == "Succeeded"
+    assert repo.get_incident(iid).state == "recovered"
+    assert [p.action_id for p in repo.list_plans(iid)] == ["restart_service"]
+    assert repo.list_decisions(iid)[0].final == "allow" and repo.list_executions(iid)[0].result == "success"
+    assert repo.list_verifications(iid)[-1].verdict == "recovered"
+    validate_against_contract(repo.latest_diagnosis(iid).to_contract(), "diagnosis")
+    assert repo.latest_diagnosis(iid).recommended_action.action_id == "restart_service"
+    assert s.audit.chain_valid()
