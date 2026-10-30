@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cloud-doctor.local/schemas/service_catalog.json",
+  "title": "Service catalog (topology as code)",
+  "description": "Single source of truth for the sandbox topology. Scrape targets, the dependency graph, health probes and the actuator allowlist are all generated from it so monitored targets cannot drift from the real topology.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["catalog_version", "environment", "network", "services"],
+  "properties": {
+    "catalog_version": {"const": 1},
+    "environment": {"const": "sandbox"},
+    "network": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{1,40}$"},
+    "sandbox_label": {"type": "string", "default": "cloud-doctor.sandbox=true"},
+    "services": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "kind", "container", "depends_on", "health", "allowed_actions"],
+        "properties": {
+          "name": {"$ref": "common.json#/$defs/service_name"},
+          "kind": {"enum": ["app", "cache", "queue_worker", "database", "load_generator"]},
+          "container": {"type": "string", "pattern": "^cd-[a-z0-9-]{2,40}$"},
+          "depends_on": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["service", "kind"],
+              "properties": {"service": {"$ref": "common.json#/$defs/service_name"}, "kind": {"enum": ["hard", "soft"]}}
+            }
+          },
+          "metrics": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["port", "path"],
+            "properties": {"port": {"type": "integer", "minimum": 1, "maximum": 65535}, "path": {"type": "string", "pattern": "^/"}}
+          },
+          "health": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["liveness"],
+            "properties": {
+              "liveness": {"type": "string"},
+              "readiness": {"type": "string"},
+              "published_probe_url": {"type": "string", "description": "Loopback URL used by Cloud Doctor's independent synthetic probes."}
+            }
+          },
+          "slo": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "availability": {"type": "number", "exclusiveMinimum": 0, "maximum": 1},
+              "latency_p95_seconds": {"type": "number", "exclusiveMinimum": 0}
+            }
+          },
+          "allowed_actions": {"type": "array", "items": {"$ref": "common.json#/$defs/action_id"}},
+          "labels": {"type": "object", "additionalProperties": {"type": "string"}}
+        }
+      }
+    }
+  }
+}
