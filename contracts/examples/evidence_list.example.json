@@ -1,0 +1,111 @@
+[
+  {
+    "evidence_id": "EV-001",
+    "incident_id": "INC-0001",
+    "source": "prometheus",
+    "type": "metric",
+    "service": "redis",
+    "observed_at": "2026-11-02T09:00:12Z",
+    "collected_at": "2026-11-02T09:00:20Z",
+    "query": "up{service=\"redis\"}",
+    "status": "ok",
+    "summary": "redis target down since 09:00:12",
+    "payload": {
+      "series": [
+        {
+          "t": "2026-11-02T09:00:05Z",
+          "v": 1
+        },
+        {
+          "t": "2026-11-02T09:00:12Z",
+          "v": 0
+        },
+        {
+          "t": "2026-11-02T09:00:20Z",
+          "v": 0
+        }
+      ]
+    },
+    "untrusted": false,
+    "payload_hash": "sha256:1839790517eca2aea55a56a70a37a0a8a627b5ae7856d607fad49bf550864249"
+  },
+  {
+    "evidence_id": "EV-002",
+    "incident_id": "INC-0001",
+    "source": "prometheus",
+    "type": "metric",
+    "service": "api",
+    "observed_at": "2026-11-02T09:00:20Z",
+    "collected_at": "2026-11-02T09:00:21Z",
+    "query": "sum(rate(http_requests_total{service=\"api\",status=~\"5..\"}[30s]))/sum(rate(http_requests_total{service=\"api\"}[30s]))",
+    "status": "ok",
+    "summary": "api 5xx ratio rose to 0.43 after redis went down",
+    "payload": {
+      "error_ratio": 0.43,
+      "requests_per_second": 22.1
+    },
+    "untrusted": false,
+    "payload_hash": "sha256:ae7e511f6ea1d6eb1e4b8a116ab684c92848232abcc0c7c2edc7655499162e51"
+  },
+  {
+    "evidence_id": "EV-003",
+    "incident_id": "INC-0001",
+    "source": "loki",
+    "type": "log",
+    "service": "api",
+    "observed_at": "2026-11-02T09:00:14Z",
+    "collected_at": "2026-11-02T09:00:22Z",
+    "query": "{service=\"api\"} |= \"redis\" | level=\"error\"",
+    "status": "ok",
+    "summary": "repeated connection refused to redis",
+    "payload": {
+      "lines": [
+        {
+          "t": "2026-11-02T09:00:14Z",
+          "line": "ERROR redis connection refused host=redis request_id=r-81"
+        }
+      ],
+      "count": 57
+    },
+    "untrusted": true,
+    "payload_hash": "sha256:8bb615d3d298190ae5ca963bbdf69d45e9ac7e31c6c8dea3ee0c9e2d671958fe"
+  },
+  {
+    "evidence_id": "EV-004",
+    "incident_id": "INC-0001",
+    "source": "prometheus",
+    "type": "metric",
+    "service": "worker",
+    "observed_at": "2026-11-02T09:00:22Z",
+    "collected_at": "2026-11-02T09:00:23Z",
+    "query": "queue_depth{service=\"worker\"}",
+    "status": "ok",
+    "summary": "queue depth rising",
+    "payload": {
+      "queue_depth": [
+        3,
+        8,
+        19
+      ]
+    },
+    "untrusted": false,
+    "payload_hash": "sha256:231493baf85a778ed0d8ef4b9809f46b9a3e63f84de5e7baf4e7d2f5ba93ad5a"
+  },
+  {
+    "evidence_id": "EV-005",
+    "incident_id": "INC-0001",
+    "source": "prometheus",
+    "type": "metric",
+    "service": "app-db",
+    "observed_at": "2026-11-02T09:00:22Z",
+    "collected_at": "2026-11-02T09:00:23Z",
+    "query": "pg_up{service=\"app-db\"}",
+    "status": "ok",
+    "summary": "app database healthy",
+    "payload": {
+      "up": 1
+    },
+    "untrusted": false,
+    "payload_hash": "sha256:926ed1c80d5d4c66ab894bda5fc7cb8d7075cf548b2399cdef3257990361472f"
+  }
+]
