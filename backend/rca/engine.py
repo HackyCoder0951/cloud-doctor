@@ -117,7 +117,11 @@ class RcaEngine:
             status = "refuted" if contra >= 0.5 else "supported" if conf >= 0.6 and contra < 0.25 else "candidate"
             alts = [f"{o.cause_id} (confidence {oc:.2f})" for o, oc, _, _ in scored if o is not c]
             if rank == 1:
-                alts += [f"{r.cause_id} (rejected: " + ("; ".join(s.text for s in r.con[:1]) or "no supporting evidence") + ")" for r in rejected[:4]]
+                seen: set[str] = set()
+                for r in rejected:
+                    if r.cause_id not in seen and len(seen) < 4:
+                        seen.add(r.cause_id)
+                        alts.append(f"{r.cause_id} (rejected: " + ("; ".join(s.text for s in r.con[:1]) or "no supporting evidence") + ")")
             if not alts:
                 alts = ["no competing candidate had supporting evidence"]
             unknowns = list(dict.fromkeys(c.unknowns + c.static_unknowns + global_unknowns))

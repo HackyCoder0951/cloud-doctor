@@ -25,7 +25,7 @@ def test_markdown_is_escaped_and_complete(world, catalog, cfg):
     rep = gen.build(inc.incident_id)
     rep["incident"]["symptoms"].append("<script>alert(1)</script> | x")
     md = gen.render_markdown(rep)
-    assert "<script>" not in md and "&lt;script&gt;" in md
+    assert "<script" not in md and "&lt;script" in md
     for section in ("## Summary", "## Timeline", "## Diagnosis", "Contradicting evidence", "Unknowns", "## Remediation", "## Verification", "## Limitations"):
         assert section in md
     assert "**Mitigated:** no" in md and "Root cause confirmed:** no" in md

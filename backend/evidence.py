@@ -51,7 +51,7 @@ class EvidenceCollector:
 
     # ------------------------------------------------------------------ storing
     def store(self, incident_id: str, *, source: str, type: str, service: str, observed_at: datetime, query: str, status: str,
-              missing: str, summary: str, payload: dict, untrusted: bool) -> Evidence:
+              missing: str, summary: str, payload: dict, untrusted: bool, salient: bool = True) -> Evidence:
         payload = strip_nul(payload)  # 1. strip NUL (JSONB rejects \u0000)
         ev = Evidence(evidence_id=self.repo.next_evidence_id(incident_id), incident_id=incident_id, source=source, type=type,
                       service=service, observed_at=observed_at, collected_at=self.clock.now(), query=strip_nul(query)[:2000],
@@ -59,7 +59,8 @@ class EvidenceCollector:
                       payload_hash=payload_hash(payload),  # 2. hash the canonical JSON BEFORE insert
                       untrusted=untrusted)
         self.repo.add_evidence(ev)
-        self.timeline.attach_evidence(incident_id, ev)
+        if salient or status in ("error", "timeout"):  # routine context readings stay in the evidence store, not the timeline
+            self.timeline.attach_evidence(incident_id, ev)
         return ev
 
     # ------------------------------------------------------------------ metrics
@@ -94,7 +95,23 @@ class EvidenceCollector:
         status = res.status if res.series else EMPTY
         expected = self.registry.active(svc, end) is not None
         return self.store(incident_id, source="prometheus", type="metric", service=svc, observed_at=observed, query=q, status=status,
-                          missing=missing_signal_for(status, expected), summary=summary, payload=payload, untrusted=False)
+                          missing=missing_signal_for(status, expected), summary=summary, payload=payload, untrusted=False,
+                          salient=self._salient_metric(metric, payload, status))
+
+    @staticmethod
+    def _salient_metric(metric: str, payload: dict, status: str) -> bool:
+        if status != "ok":
+            return True  # a signal that disappeared is itself notable
+        if metric == "build_version":
+            return len({v["version"] for v in payload.get("versions", [])}) > 1
+        vals = [p["v"] for p in payload.get("series", [])]
+        if len(vals) < 2:
+            return False
+        if metric in ("up", "cd_service_up") or "dependency_up" in str(payload.get("metric", "")):
+            return min(vals) == 0
+        first, last = vals[0], vals[-1]
+        return abs(last - first) > 0.3 * max(abs(first), 1e-9) and abs(last - first) > 1e-6 * max(abs(first), 1.0) and metric != "start_time" or \
+            (metric == "start_time" and last > first + 1)
 
     def _logs(self, incident_id: str, svc: str, start: datetime, end: datetime, phase: str) -> Evidence:
         q = f'{{service="{svc}"}}'
@@ -111,7 +128,7 @@ class EvidenceCollector:
         return self.store(incident_id, source="loki", type="log", service=svc, observed_at=observed, query=q, status=status,
                           missing=missing_signal_for(status, self.registry.active(svc, end) is not None),
                           summary=f"{svc} logs: {len(lines)} lines, {errs} error-level in window (text is untrusted)",
-                          payload={**base, "lines": lines, "truncated": len(res.lines) > MAX_LINES}, untrusted=True)
+                          payload={**base, "lines": lines, "truncated": len(res.lines) > MAX_LINES}, untrusted=True, salient=errs > 0)
 
     def _events(self, incident_id: str, services: list[str], start: datetime, end: datetime, phase: str) -> list[Evidence]:
         res = self.feed.events(start, end)
@@ -140,7 +157,7 @@ class EvidenceCollector:
         return self.store(incident_id, source="synthetic_probe", type="probe", service=svc, observed_at=at, query=f"probe {svc}", status="ok",
                           missing="none", summary=f"{svc} synthetic transaction {'succeeded' if r.ok else 'FAILED'} (status {r.status_code})",
                           payload={"metric": "synthetic_probe", "phase": phase, "ok": r.ok, "status_code": r.status_code, "latency_s": r.latency_s},
-                          untrusted=False)
+                          untrusted=False, salient=not r.ok)
 
     # ------------------------------------------------------------------ public
     def collect(self, incident_id: str, at: datetime | None = None, phase: str = "initial", services: list[str] | None = None,

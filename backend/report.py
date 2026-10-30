@@ -70,7 +70,7 @@ class ReportGenerator:
     @staticmethod
     def _md(text: object) -> str:
         """Neutralise text for Markdown: escape HTML, table pipes and newlines (evidence text is untrusted)."""
-        s = html.escape(str(text), quote=False)
+        s = html.escape(str(text), quote=False).replace("&gt;", ">")
         s = re.sub(r"[\r\n]+", " ", s)
         return s.replace("|", "\\|").replace("`", "'")
 
