@@ -6,17 +6,19 @@ import time
 
 import psycopg
 import redis
-from prometheus_client import Counter, Gauge
+from prometheus_client import Counter, Gauge, Histogram
 
-from app.common import json_body, log, metrics_route, serve
+from app.common import register_fs_metrics, json_body, log, metrics_route, serve
 
 JOBS = Counter("jobs_processed_total", "Jobs finished", ["result"])
 QUEUE = Gauge("queue_depth", "Length of the jobs list", ["queue"])
+DB_CALL = Histogram("db_call_duration_seconds", "Client-side duration of a database call (connect and query)",
+                    buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5))
 DEP = Gauge("cd_dependency_up", "Whether this service reaches its dependency", ["dependency"])
 
 R = redis.Redis(host=os.environ["REDIS_HOST"], port=6379, socket_connect_timeout=1, socket_timeout=3)
 DB = dict(host=os.environ["DB_HOST"], port=5432, dbname="postgres", user="postgres",
-          password=os.environ["APP_DB_PASSWORD"], connect_timeout=1)
+          password=os.environ["APP_DB_PASSWORD"], connect_timeout=1, application_name="worker")
 _state = {"redis": False, "db": False}
 
 
@@ -26,8 +28,9 @@ def ensure_table():
 
 
 def record(job_id):
-    with psycopg.connect(**DB) as conn:
-        conn.execute("insert into jobs_done (id) values (%s) on conflict do nothing", (job_id,))
+    with DB_CALL.time():
+        with psycopg.connect(**DB) as conn:
+            conn.execute("insert into jobs_done (id) values (%s) on conflict do nothing", (job_id,))
 
 
 def clear_queue_metric():
@@ -74,6 +77,7 @@ def readyz(_query):
 
 
 if __name__ == "__main__":
+    register_fs_metrics()
     log("info", "worker starting")
     for _ in range(30):
         try:

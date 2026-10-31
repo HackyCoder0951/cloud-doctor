@@ -7,7 +7,7 @@ import urllib.request
 
 from prometheus_client import Counter
 
-from app.common import json_body, log, metrics_route, serve
+from app.common import register_fs_metrics, json_body, log, metrics_route, serve
 
 REQS = Counter("loadgen_requests_total", "Synthetic requests sent", ["status"])
 TARGET = os.environ.get("TARGET_URL", "http://cd-api:8000/work")
@@ -29,6 +29,7 @@ def worker():
 
 
 if __name__ == "__main__":
+    register_fs_metrics()
     log("info", "loadgen starting", target=TARGET, threads=THREADS)
     for _ in range(THREADS):
         threading.Thread(target=worker, daemon=True).start()

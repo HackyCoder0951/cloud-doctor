@@ -9,17 +9,19 @@ import psycopg
 import redis
 from prometheus_client import Counter, Gauge, Histogram
 
-from app.common import json_body, log, metrics_route, serve
+from app.common import register_fs_metrics, json_body, log, metrics_route, serve
 
 REQS = Counter("http_requests_total", "Requests handled", ["route", "method", "status"])
 LAT = Histogram("http_request_duration_seconds", "Request latency", ["route"],
                 buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5))
+DB_CALL = Histogram("db_call_duration_seconds", "Client-side duration of a database call (connect and query)",
+                    buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5))
 DEP = Gauge("cd_dependency_up", "Whether this service reaches its dependency", ["dependency"])
 Gauge("build_info", "Deployed version", ["version"]).labels(version=os.environ.get("APP_VERSION", "1.0.0")).set(1)
 
 R = redis.Redis(host=os.environ["REDIS_HOST"], port=6379, socket_connect_timeout=1, socket_timeout=1)
 DB = dict(host=os.environ["DB_HOST"], port=5432, dbname="postgres", user="postgres",
-          password=os.environ["APP_DB_PASSWORD"], connect_timeout=1)
+          password=os.environ["APP_DB_PASSWORD"], connect_timeout=1, application_name="api")
 
 
 def redis_ok():
@@ -34,8 +36,9 @@ def redis_ok():
 
 def db_ok():
     try:
-        with psycopg.connect(**DB) as conn:
-            conn.execute("select 1")
+        with DB_CALL.time():
+            with psycopg.connect(**DB) as conn:
+                conn.execute("select 1")
         DEP.labels(dependency="app-db").set(1)
         return True
     except Exception:  # noqa: BLE001
@@ -82,6 +85,7 @@ def background_dependency_check():
 
 
 if __name__ == "__main__":
+    register_fs_metrics()
     log("info", "api starting", version=os.environ.get("APP_VERSION", "1.0.0"))
     threading.Thread(target=background_dependency_check, daemon=True).start()
     serve(8000, {
