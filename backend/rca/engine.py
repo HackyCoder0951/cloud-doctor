@@ -23,6 +23,8 @@ from backend.remediation.catalogue import recommend
 from .facts import TS, Facts
 
 ERR_THR, LAT_THR, CPU_THR = 0.05, 0.5, 1.0
+# harness-4 signals (provisional values, not tuned on any run): client-side db call p95, server-side probe time, filesystem fullness
+DB_CALL_THR, DB_PROBE_THR, FS_FULL = 0.25, 0.05, 0.95
 TEMPORAL_ONLY_CAP, CONF_CAP = 0.30, 0.95
 
 
@@ -214,6 +216,15 @@ class RcaEngine:
             if self.catalog.kind(s) == "database" and any(sig.kind == "too_many" and sig.target == s
                                                           for d in self.catalog.dependents(s) for sig in f.log_sigs(d)):
                 cands.append(self._db_exhaustion(f, s, sy))
+        # (5b) network latency between a service and its database: slow client-side calls while the server answers quickly
+        for dep in sorted({d for s in self.catalog.names() for d in self.catalog.dependencies(s) if self.catalog.kind(d) == "database"}):
+            slow = [s for s in self.catalog.names() if dep in self.catalog.dependencies(s) and f.elevated(s, "db_call_p95", DB_CALL_THR)]
+            if slow:
+                cands.append(self._net_latency(f, dep, slow))
+        # (5c) filesystem full
+        for s in self.catalog.names():
+            if f.elevated(s, "fs_used_ratio", FS_FULL):
+                cands.append(self._disk(f, s))
         # (6) generic local fault of a symptomatic, non-down service
         for s, items in sorted(sy.items()):
             if s not in down_services and self.catalog.kind(s) in ("app", "queue_worker") and any(k in ("errors", "latency", "queue") for k, _, _ in items):
@@ -381,8 +392,24 @@ class RcaEngine:
 
     # ---------------------------------------------------------------- db connection exhaustion
     def _db_exhaustion(self, f: Facts, s: str, sy: dict) -> Cand:
+        conns, limit, by_client = f.ts(s, "db_connections"), f.ts(s, "db_max_connections"), f.clients.get(s)
+        unknowns = []
+        if not (conns and limit):
+            unknowns.append("no connection count / max_connections series was collected, so connection saturation is not measured")
+        if not by_client:
+            unknowns.append("no per-client connection counts were collected, so the leaking client is not identified")
         c = Cand(f"{s.replace('-', '_')}_connection_exhaustion", s, f"{s} is running but out of connections; clients cannot connect although the process is healthy.",
-                 static_unknowns=["connection counts / max_connections are not part of the telemetry contract, so the leaking client is not identified"])
+                 static_unknowns=unknowns)
+        if conns and limit and limit.last:
+            used = max(v for _, v in conns.pts[-3:]) / limit.last  # weight only when the signal exists, so older evidence sets keep their score
+            c.need(used >= 0.8, 3, f"{s} holds {conns.last:.0f} of {limit.last:.0f} allowed connections ({used:.0%})", "observation", [conns.eid, limit.eid], "metric",
+                   bad=f"{s} uses only {used:.0%} of its connection limit, which does not explain exhaustion", bad_evs=[conns.eid, limit.eid])
+        if by_client:
+            top, n = max(by_client.items(), key=lambda kv: kv[1])
+            total = sum(by_client.values())
+            ev = f.raw(s, "db_connections_by_client")
+            c.need(total > 0 and n / total >= 0.5, 1, f"client '{top}' holds {n:.0f} of {total:.0f} connections ({n / total:.0%}): the likely leaker",
+                   "observation", [ev.eid] if ev else [], "metric")
         hits = [(d, sg) for d in self.catalog.dependents(s) for sg in f.log_sigs(d) if sg.kind == "too_many" and sg.target == s]
         c.need(True, 3, "error logs of " + ", ".join(sorted({d for d, _ in hits})) + " report the connection limit being reached", "observation", [sg.eid for _, sg in hits], "log")
         lost = [d for d in self.catalog.dependents(s) if f.dep_down(d, s)]
@@ -391,6 +418,38 @@ class RcaEngine:
         c.need(bool(reach), 2, f"{s} itself answers its availability probe (up/cd_service_up == 1): it is not down", "observation", reach, "metric",
                bad=f"{s} does not answer its probe", bad_evs=f.down_info(s)[1] if f.down_info(s) else [])
         c.need(len(lost) >= 2, 1, "more than one dependent is affected", "inference", self._ids([f.dep_down(d, s) for d in lost]), "metric")
+        return c
+
+    # ---------------------------------------------------------------- network latency to a dependency
+    def _net_latency(self, f: Facts, dep: str, slow: list[str]) -> Cand:
+        c = Cand(f"{dep.replace('-', '_')}_network_latency", dep,
+                 f"Calls to {dep} are slow for its clients while {dep} itself answers quickly: the delay is on the path between them, not in {dep}.",
+                 static_unknowns=["the network path itself is not measured (no latency or loss probe between containers), so this is inferred by exclusion"])
+        for s in slow:
+            el = f.elevated(s, "db_call_p95", DB_CALL_THR)
+            c.need(True, 3, f"{s} client-side {dep} call p95 is {el[1].tail_mean():.2f}s (above {DB_CALL_THR}s)", "observation", [el[1].eid], "metric")
+        probe = f.ts(dep, "db_probe_seconds")
+        if probe:
+            fast = (probe.tail_mean() or 0) < DB_PROBE_THR
+            c.need(fast, 3, f"{dep} answers a probe query in {probe.tail_mean() * 1000:.0f} ms, measured from inside the sandbox network: the database is not slow",
+                   "observation", [probe.eid], "metric",
+                   bad=f"{dep} itself answers slowly ({probe.tail_mean():.2f}s), so the delay is in {dep}, not the network", bad_evs=[probe.eid])
+        else:
+            c.unknowns.append(f"no server-side probe time for {dep} was collected, so a slow {dep} is not ruled out")
+        reach = f.reachable(dep)
+        c.need(bool(reach), 1, f"{dep} answers its availability probe (up/cd_service_up == 1): it is not down", "observation", reach, "metric",
+               bad=f"{dep} does not answer its probe", bad_evs=f.down_info(dep)[1] if f.down_info(dep) else [])
+        conns, limit = f.ts(dep, "db_connections"), f.ts(dep, "db_max_connections")
+        if conns and limit and limit.last and max(v for _, v in conns.pts[-3:]) / limit.last >= 0.8:
+            c.against(f"{dep} is near its connection limit, an alternative explanation for slow calls", [conns.eid, limit.eid], 3, "metric")
+        return c
+
+    # ---------------------------------------------------------------- filesystem full
+    def _disk(self, f: Facts, s: str) -> Cand:
+        el = f.elevated(s, "fs_used_ratio", FS_FULL)
+        c = Cand(f"{s.replace('-', '_')}_disk_full", s, f"The filesystem used by {s} is full.",
+                 static_unknowns=["the log volume is shared by api, worker and loadgen, so the process filling it is not identified"])
+        c.need(True, 3, f"{s} filesystem usage is {el[1].tail_mean():.0%} (at or above {FS_FULL:.0%})", "observation", [el[1].eid], "metric")
         return c
 
     # ---------------------------------------------------------------- local fault
