@@ -16,6 +16,8 @@ Branch `stream/infra`. Updated 2026-10-31. Honest summary; nothing here is an ex
 - `infra/tools/fault_worker.py` — one observation (N=1) of `docker kill cd-worker` and restart: `up{service="worker"}` fell to 0 within about 3 s of the kill, processing rate dropped below 0.1 jobs/s by about 9 s; after `docker start`, `up` was 1 at about 3 s, processing resumed at about 9 s, and the backlog (855 jobs at restart) drained to 0 by about 24 s. **Single observation; not an experiment result.**
 - Finding: `queue_depth` is exported by the worker, so while the worker is dead the series is **absent** instead of growing; the backlog is only visible after restart. Detectors for a worker crash must rely on `up`/absence of worker series, not on a rising `queue_depth`. (Candidate addition to `contracts/telemetry.md`; contract not changed here.)
 
+- `cd_queue_length{service="redis",queue="jobs"}` added to the probe sidecar (change request backend-1; `contracts/telemetry.md` updated, additive). One N=1 observation after the change: steady value 3; with the worker killed it rose to 195 in 24 s while `queue_depth` was absent; after the restart it fell to 2; with Redis stopped it was absent and returned when Redis did. `make smoke` has one more check (18 total). **The backend does not use this metric yet** (its detector still reads `queue_depth`).
+
 ## Not done
 - Micro-VM sandbox (needs the user to install Docker Sandboxes with sudo); spikes S1–S7 not run.
 - Alertmanager and Grafana (not used by the MVP detector design).
