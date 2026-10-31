@@ -154,6 +154,15 @@ verify_envelope = _impl.verify_envelope
 def make_context(**kw) -> Any:
     """Build a PolicyContext for whichever implementation is active."""
     if IS_REAL:
+        # the real package has its own Catalog type; load the same file with it (a foreign Catalog makes I-02/I-03/I-06 raise -> I-08)
+        cat = kw.get("catalog")
+        if not isinstance(cat, _impl.Catalog):
+            if not getattr(cat, "source", None):
+                raise ValueError("backend Catalog has no source path; cannot build the real invariants catalogue")
+            kw["catalog"] = _impl.Catalog.load(cat.source)
+        # in-process stand-in for the actuator's real label check (see docs/dev/policy/INTEGRATION.md)
+        if kw.get("container_labels") is None:
+            kw["container_labels"] = kw["catalog"].declared_labels
         return _impl.PolicyContext(**kw)
     return PolicyContext(**kw)
 
@@ -178,4 +187,7 @@ def evaluate(plan: dict, ctx: Any) -> PolicyOutcome:
         return PolicyOutcome("pass", rules, "allow_with_approval", reasons or ["approval required"], VERSION)  # real pkg may encode it as !ok
     if not ok:
         return PolicyOutcome("deny", rules or ["I-08"], "deny", reasons or ["denied"], VERSION)
-    return PolicyOutcome("pass", rules, "allow_with_approval" if needs else "allow", reasons, VERSION)
+    # real package: requires_approval means "effective risk is medium", and stays True after a valid bound approval (ok=True)
+    # only the real package reports pending_approval; the stub keeps its own flag (a mismatched approval must never allow)
+    pending = bool(getattr(res, "pending_approval", needs)) if IS_REAL else needs
+    return PolicyOutcome("pass", rules, "allow_with_approval" if pending else "allow", reasons, VERSION)
