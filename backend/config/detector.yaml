@@ -26,6 +26,7 @@ metrics:
   db_connections: 'cd_db_connections{service="$service"}'
   db_max_connections: 'cd_db_max_connections{service="$service"}'
   db_connections_by_client: 'cd_db_connections_by_client{service="$service"}'
+  db_refused: 'cd_db_connection_refused{service="$service"}'
   db_probe_seconds: 'cd_db_probe_duration_seconds{service="$service"}'
   db_call_p95: 'histogram_quantile(0.95, sum by (le) (rate(db_call_duration_seconds_bucket{service="$service"}[30s])))'
   fs_used_ratio: 'cd_fs_used_bytes{service="$service"} / on(service, mount) cd_fs_size_bytes{service="$service"}'

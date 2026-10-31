@@ -31,7 +31,7 @@ KIND_METRICS = {
             "db_call_p95", "fs_used_ratio"],
     "queue_worker": ["up", "queue_depth", "start_time", "memory_bytes", "db_call_p95"],
     "cache": ["up", "cd_service_up"],
-    "database": ["up", "cd_service_up", "db_connections", "db_max_connections", "db_connections_by_client", "db_probe_seconds"],
+    "database": ["up", "cd_service_up", "db_connections", "db_max_connections", "db_connections_by_client", "db_probe_seconds", "db_refused"],
     "load_generator": ["up", "start_time"],
 }
 

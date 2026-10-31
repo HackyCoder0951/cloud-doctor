@@ -213,8 +213,10 @@ class RcaEngine:
                 cands.append(self._cpu(f, s, sy))
         # (5) database connection exhaustion
         for s in self.catalog.names():
-            if self.catalog.kind(s) == "database" and any(sig.kind == "too_many" and sig.target == s
-                                                          for d in self.catalog.dependents(s) for sig in f.log_sigs(d)):
+            refused = f.ts(s, "db_refused")
+            if self.catalog.kind(s) == "database" and (any(sig.kind == "too_many" and sig.target == s
+                                                           for d in self.catalog.dependents(s) for sig in f.log_sigs(d))
+                                                       or (refused and refused.last == 1)):
                 cands.append(self._db_exhaustion(f, s, sy))
         # (5b) network latency between a service and its database: slow client-side calls while the server answers quickly
         for dep in sorted({d for s in self.catalog.names() for d in self.catalog.dependencies(s) if self.catalog.kind(d) == "database"}):
@@ -400,6 +402,11 @@ class RcaEngine:
             unknowns.append("no per-client connection counts were collected, so the leaking client is not identified")
         c = Cand(f"{s.replace('-', '_')}_connection_exhaustion", s, f"{s} is running but out of connections; clients cannot connect although the process is healthy.",
                  static_unknowns=unknowns)
+        refused = f.ts(s, "db_refused")
+        if refused and refused.last == 1:
+            c.need(True, 3, f"{s} refused the monitoring connection with 'too many clients': the connection limit is reached", "observation", [refused.eid], "metric")
+        elif refused:
+            c.need(False, 1, "", "observation", [refused.eid], "metric", bad=f"{s} accepted the monitoring connection, so its connection limit is not reached", bad_evs=[refused.eid])
         if conns and limit and limit.last:
             used = max(v for _, v in conns.pts[-3:]) / limit.last  # weight only when the signal exists, so older evidence sets keep their score
             c.need(used >= 0.8, 3, f"{s} holds {conns.last:.0f} of {limit.last:.0f} allowed connections ({used:.0%})", "observation", [conns.eid, limit.eid], "metric",
