@@ -38,7 +38,10 @@ def served(tmp_path):
 
 def raw(path, method, target, body=b"", headers=None):
     c = _UnixConnection(path, 5)
-    c.request(method, target, body=body, headers=headers or {})
+    try:
+        c.request(method, target, body=body, headers=headers or {})
+    except (BrokenPipeError, ConnectionResetError):
+        pass  # the server answered (404/405/413) and closed before the body was sent; the response is still readable
     r = c.getresponse()
     data = r.read()
     c.close()
