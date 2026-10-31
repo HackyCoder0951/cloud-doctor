@@ -1,0 +1,331 @@
+<title>Cloud Doctor Console</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: sticky top bar + status strip, content column (max 1360), incident page = main column + sticky decision rail.
+   Dark-first ops console. Accent (periwinkle) is separate from semantic ok / warn / bad / unknown. */
+:root {
+  --bg:#0c1014; --bg2:#111820; --panel:#151d26; --panel2:#1a242f; --line:#263340; --line2:#33434f;
+  --fg:#e7edf3; --muted:#8fa0b0; --faint:#5f7080; --accent:#8da7ff; --accent-bg:#1b2442; --accent-fg:#0c1014;
+  --ok:#4fd18b; --ok-bg:#12281f; --warn:#f0b64a; --warn-bg:#2d2411; --bad:#ff7a70; --bad-bg:#33171a; --unk:#a5b2bf; --unk-bg:#222c36;
+  --shadow:0 8px 28px rgba(0,0,0,.35);
+  --display:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif; --body:'Onest','Segoe UI',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
+  --bg:#f3f6f9; --bg2:#ffffff; --panel:#ffffff; --panel2:#eef2f6; --line:#d8e0e8; --line2:#c3cfda;
+  --fg:#16212b; --muted:#566677; --faint:#8696a6; --accent:#3a55c8; --accent-bg:#e4e9fb; --accent-fg:#ffffff;
+  --ok:#17803f; --ok-bg:#dff4e7; --warn:#8a5a00; --warn-bg:#fff0cc; --bad:#b42318; --bad-bg:#fde4e1; --unk:#4a5866; --unk-bg:#e8edf2;
+  --shadow:0 8px 24px rgba(30,50,70,.12); color-scheme:light;}}
+:root[data-theme="light"]{
+  --bg:#f3f6f9; --bg2:#ffffff; --panel:#ffffff; --panel2:#eef2f6; --line:#d8e0e8; --line2:#c3cfda;
+  --fg:#16212b; --muted:#566677; --faint:#8696a6; --accent:#3a55c8; --accent-bg:#e4e9fb; --accent-fg:#ffffff;
+  --ok:#17803f; --ok-bg:#dff4e7; --warn:#8a5a00; --warn-bg:#fff0cc; --bad:#b42318; --bad-bg:#fde4e1; --unk:#4a5866; --unk-bg:#e8edf2;
+  --shadow:0 8px 24px rgba(30,50,70,.12); color-scheme:light;}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.5 var(--body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:26px;line-height:1.15}h2{font-size:16px}h3{font-size:14px;font-family:var(--body);font-weight:600}
+a{color:var(--accent)}button,input,textarea,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.mono{font-family:var(--mono);font-size:12.5px}.muted{color:var(--muted)}.faint{color:var(--faint)}
+.wrap{max-width:1360px;margin:0 auto}
+/* top bar */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg2);border-bottom:1px solid var(--line);margin-inline:calc(-1*max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px))}
+.top .wrap{display:flex;align-items:center;gap:18px;min-height:54px;flex-wrap:wrap;padding-block:6px}
+.brand{font:700 17px var(--display);display:flex;gap:9px;align-items:center;letter-spacing:-.01em}
+.brand i{width:22px;height:22px;border-radius:7px;background:conic-gradient(from 200deg,var(--accent),var(--ok),var(--accent));display:inline-block}
+nav{display:flex;gap:2px;flex:1;flex-wrap:wrap}
+nav button{background:none;border:0;padding:8px 12px;border-radius:7px;color:var(--muted);cursor:pointer;font-weight:500;position:relative}
+nav button:hover{color:var(--fg);background:var(--panel2)}nav button[aria-current=page]{color:var(--fg);background:var(--panel2)}
+nav .dot{background:var(--bad);color:#fff;border-radius:99px;font-size:11px;padding:0 6px;margin-left:6px;font-weight:600}
+.tools{display:flex;gap:8px;align-items:center}
+.chip{display:inline-flex;gap:7px;align-items:center;padding:4px 10px;border-radius:99px;border:1px solid var(--line2);background:var(--panel);font-size:12.5px;cursor:pointer}
+.live{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 var(--ok);animation:pulse 2s infinite}
+@keyframes pulse{70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+@media (prefers-reduced-motion:reduce){.live{animation:none}*{transition:none!important}}
+.menu{position:absolute;right:0;top:44px;width:min(330px,92vw);background:var(--panel);border:1px solid var(--line2);border-radius:12px;box-shadow:var(--shadow);padding:10px;z-index:30}
+.menu .opt{display:flex;gap:10px;width:100%;text-align:left;background:none;border:0;padding:8px;border-radius:8px;cursor:pointer;align-items:flex-start}
+.menu .opt:hover,.menu .opt[aria-checked=true]{background:var(--panel2)}.menu .opt small{color:var(--muted);display:block}
+.menu hr{border:0;border-top:1px solid var(--line);margin:8px 0}
+.rel{position:relative}
+.strip{font-size:12.5px;padding:7px 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.strip.open{background:var(--warn-bg);color:var(--warn);margin-inline:calc(-1*max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px))}
+.strip.open .wrap{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+main{padding-block:24px 64px}
+.head{display:flex;gap:16px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;margin-bottom:18px}
+.head p{margin:4px 0 0;color:var(--muted);max-width:68ch}
+/* pills */
+.pill{display:inline-flex;align-items:center;gap:6px;padding:1px 9px;border-radius:99px;font-size:12px;font-weight:600;border:1px solid transparent;white-space:nowrap}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.p-ok{color:var(--ok);background:var(--ok-bg)}.p-warn{color:var(--warn);background:var(--warn-bg)}.p-bad{color:var(--bad);background:var(--bad-bg)}.p-unk{color:var(--unk);background:var(--unk-bg);border:1px dashed var(--unk)}.p-acc{color:var(--accent);background:var(--accent-bg)}
+.p-bad::before{border-radius:2px}.p-warn::before{border-radius:1px;transform:rotate(45deg)}.p-unk::before{background:none;border:1.5px dashed currentColor}
+.tag{font-family:var(--mono);font-size:11.5px;padding:1px 7px;border-radius:5px;background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
+/* panels */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px}
+.pad{padding:16px}.ph{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.grid{display:grid;gap:16px}.g-sum{grid-template-columns:repeat(5,minmax(0,1fr))}@media (max-width:900px){.g-sum{grid-template-columns:repeat(2,minmax(0,1fr))}}.g-svc{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+.two{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+@media (max-width:980px){.two{grid-template-columns:minmax(0,1fr)}}
+.stat{padding:14px 16px}.stat b{display:block;font:700 30px/1.1 var(--display);font-variant-numeric:tabular-nums}.stat span{color:var(--muted);font-size:12.5px}
+.stat.hot{border-color:var(--bad);background:linear-gradient(var(--bad-bg),var(--panel))}.stat.hot b{color:var(--bad)}
+/* needs attention */
+.need{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;padding:14px 16px;align-items:center;border-top:1px solid var(--line);cursor:pointer;background:none;border-left:0;border-right:0;border-bottom:0;text-align:left;width:100%}
+.need:first-of-type{border-top:0}.need:hover{background:var(--panel2)}
+.sev{width:4px;align-self:stretch;border-radius:4px;background:var(--warn)}.sev.high{background:var(--bad)}
+@media (max-width:640px){.need{grid-template-columns:auto minmax(0,1fr)}.need .go{grid-column:2}}
+/* service cards */
+.svc{padding:14px 16px;cursor:pointer;text-align:left;width:100%;display:block;transition:border-color .15s}.svc:hover{border-color:var(--accent)}
+.svc .r{display:flex;justify-content:space-between;align-items:center;gap:8px}.svc .nm{font:600 16px var(--display)}
+.svc dl{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:10px 0 0;font-size:13px}.svc dt{color:var(--muted)}.svc dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+.svc svg{display:block;width:100%;height:34px;margin-top:10px}
+.st-bad{border-top:3px solid var(--bad)}.st-warn{border-top:3px solid var(--warn)}.st-ok{border-top:3px solid var(--ok)}.st-unk{border-top:3px dashed var(--unk)}
+/* tables / rows */
+.row{display:grid;grid-template-columns:90px minmax(0,1.6fr) 130px minmax(0,1fr) 150px;gap:14px;padding:13px 16px;border-top:1px solid var(--line);align-items:center;cursor:pointer;width:100%;background:none;border-left:0;border-right:0;border-bottom:0;text-align:left}
+.row:hover{background:var(--panel2)}.row.hd{cursor:default;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;border-top:0}.row.hd:hover{background:none}
+@media (max-width:860px){.row{grid-template-columns:1fr 1fr}.row.hd{display:none}}
+.chips{display:flex;gap:8px;flex-wrap:wrap}.chips button{border:1px solid var(--line2);background:var(--panel);padding:5px 12px;border-radius:99px;cursor:pointer}.chips button[aria-pressed=true]{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}
+/* stepper */
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin:18px 0 6px}
+.step{position:relative;padding-top:20px;font-size:12.5px;color:var(--faint)}
+.step::before{content:"";position:absolute;top:5px;left:0;right:0;height:3px;background:var(--line2);border-radius:3px}
+.step::after{content:"";position:absolute;top:0;left:0;width:13px;height:13px;border-radius:50%;background:var(--bg);border:3px solid var(--line2)}
+.step.done{color:var(--fg)}.step.done::before{background:var(--ok)}.step.done::after{background:var(--ok);border-color:var(--ok)}
+.step.now{color:var(--fg);font-weight:600}.step.now::before{background:linear-gradient(90deg,var(--accent),var(--line2))}.step.now::after{border-color:var(--accent)}
+.step.stuck::after{border-color:var(--warn);background:var(--warn)}
+.step small{display:block;font-weight:400;color:var(--muted)}
+/* tabs */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin:22px 0 18px;overflow-x:auto}
+.tabs button{background:none;border:0;border-bottom:2px solid transparent;padding:9px 14px;color:var(--muted);cursor:pointer;white-space:nowrap;font-weight:500}
+.tabs button[aria-selected=true]{color:var(--fg);border-bottom-color:var(--accent)}
+/* rail & decision */
+.rail{position:sticky;top:calc(70px + env(safe-area-inset-top,0px));display:grid;gap:14px}
+.decide{border:1px solid var(--warn);background:linear-gradient(var(--warn-bg),var(--panel) 60%)}
+.decide.ok{border-color:var(--line)}.decide.ok{background:var(--panel)}
+.btn{border:1px solid var(--line2);background:var(--panel2);padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}.btn.bad{color:var(--bad);border-color:var(--bad);background:none}
+.btn:disabled{opacity:.45;cursor:not-allowed}.btns{display:flex;gap:8px;flex-wrap:wrap}
+.lock{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--muted);background:var(--panel2);padding:8px 10px;border-radius:8px;border:1px dashed var(--line2)}
+textarea{width:100%;background:var(--bg);border:1px solid var(--line2);border-radius:8px;padding:8px 10px;resize:vertical;min-height:62px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:13px;margin:0}.kv dt{color:var(--muted)}.kv dd{margin:0;word-break:break-all}
+/* timeline */
+.tl{list-style:none;margin:0;padding:0;position:relative}.tl::before{content:"";position:absolute;left:79px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.tl li{display:grid;grid-template-columns:70px 20px minmax(0,1fr);gap:8px;padding:7px 0}
+.tl time{color:var(--muted);font-family:var(--mono);font-size:12px;text-align:right;padding-top:2px}
+.tl .n{width:11px;height:11px;border-radius:50%;margin:6px 0 0 5px;background:var(--line2);border:2px solid var(--bg2);position:relative}
+.tl .n.alert{background:var(--bad)}.tl .n.diag{background:var(--accent)}.tl .n.good{background:var(--ok)}.tl .n.act{background:var(--warn)}
+.tl small{color:var(--muted);display:block}
+/* diagnosis */
+.hyp{padding:16px}.bar{height:8px;border-radius:6px;background:var(--panel2);overflow:hidden;margin:6px 0 2px}.bar i{display:block;height:100%;background:var(--accent)}
+.claims{list-style:none;padding:0;margin:8px 0;display:grid;gap:7px}.claims li{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-top:14px}
+.note{border-left:3px solid var(--accent);background:var(--accent-bg);padding:10px 12px;border-radius:0 8px 8px 0;font-size:13px}
+.note.w{border-color:var(--warn);background:var(--warn-bg)}
+.logs{background:var(--bg);border:1px solid var(--line);border-radius:8px;font-family:var(--mono);font-size:12px;max-height:230px;overflow:auto;padding:6px 0}.logs div{padding:1px 12px;white-space:pre-wrap;overflow-wrap:anywhere}.logs .e{color:var(--bad)}
+.evrow{display:grid;grid-template-columns:70px 100px minmax(0,1fr) auto;gap:12px;padding:10px 16px;border-top:1px solid var(--line);align-items:start}
+@media (max-width:700px){.evrow{grid-template-columns:60px 1fr}}
+.evrow.f{background:var(--accent-bg)}
+/* topology */
+.topo{width:100%;height:auto;display:block}.topo text{fill:var(--fg);font:600 13px var(--display)}.topo .s{fill:var(--muted);font:11px var(--body)}
+.topo .e{stroke:var(--line2);stroke-width:1.6;fill:none}.topo .e.bad{stroke:var(--bad);stroke-dasharray:5 4}
+.topo .nd rect{fill:var(--panel);stroke-width:2;cursor:pointer}.topo .nd:hover rect{fill:var(--panel2)}
+.drawer{padding:16px;display:grid;gap:12px}
+/* matrix */
+.mx{width:100%;border-collapse:collapse}.mx th,.mx td{padding:10px 14px;border-top:1px solid var(--line);text-align:center}.mx th:first-child,.mx td:first-child{text-align:left}
+.mx thead th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;border-top:0}
+.mx tr.me th,.mx td.me{background:var(--accent-bg)}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--faint)}
+.scroll{overflow-x:auto}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;box-shadow:var(--shadow);z-index:50;font-weight:500;max-width:92vw}
+.proto{font-size:12px;color:var(--muted);padding:10px 0 0}
+.chain{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+</style>
+
+<div id="app"></div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+/* ---------- sample data (modelled on the real sandbox run; marked as sample in the UI) ---------- */
+const SVC=[
+ {n:'api',kind:'app',st:'bad',av:'38%',p95:'4.2 s',tp:'3 rps',dep:['redis','app-db'],inc:'INC-0003',sp:[99,99,98,99,97,80,52,40,38,38,37,38]},
+ {n:'worker',kind:'queue_worker',st:'bad',av:'0%',p95:'n/a',tp:'0 jobs/s',dep:['redis','app-db'],inc:'INC-0002',sp:[100,100,100,100,100,60,0,0,0,0,0,0]},
+ {n:'app-db',kind:'database',st:'warn',av:'100%',p95:'0.3 ms probe',tp:'100/100 conn',dep:[],inc:'INC-0003',sp:[4,6,5,5,30,70,100,100,100,100,100,100]},
+ {n:'redis',kind:'cache',st:'ok',av:'100%',p95:'0.9 ms',tp:'queue 0',dep:[],inc:null,sp:[0,0,1,0,0,0,0,0,1,0,0,0]},
+ {n:'loadgen',kind:'load_generator',st:'ok',av:'100%',p95:'—',tp:'10 rps',dep:['api'],inc:null,sp:[10,10,10,10,10,10,10,10,10,10,10,10]}];
+const ST={ok:['HEALTHY','p-ok'],warn:['DEGRADED','p-warn'],bad:['UNHEALTHY','p-bad'],unk:['UNKNOWN','p-unk']};
+const INC={
+'INC-0003':{id:'INC-0003',title:'app-db is out of connections',state:'diagnosed',step:2,sev:'high',opened:'19:10:51Z',age:'4 m',svcs:['api','worker','app-db'],
+ cause:'app_db_connection_exhaustion',conf:.44,basis:['evidence coverage 0.73 (8.0 / 11.0 signal weight)','1 independent signal type (metric), factor 0.60','contradiction share 0.00'],
+ sum:'The database process is healthy but has no free connections, so api and worker cannot connect.',
+ claims:[['observation','app-db refused the monitoring connection with "too many clients"','EV-034'],['inference','Dependents cannot reach it: api, worker','EV-015, EV-024'],['observation','app-db answers its availability probe, so it is not down','EV-028'],['inference','More than one dependent is affected','EV-015']],
+ contra:[],unk:['Connection counts and the leaking client are unavailable while the probe is refused (any count shown is stale).','Change feed unavailable: deploys and container events are not ruled out.'],
+ alts:[['app_db_unavailable','0.05','refuted: it still answers its probe'],['redis_unavailable','rejected','redis answers its probe']],
+ action:{id:'escalate',why:'No safe catalogue action for connection exhaustion. Restarting a database is never allowed.'},plan:null,
+ tl:[['19:10:51','alert','api and worker lose app-db (cd_dependency_up = 0)'],['19:10:56','alert','worker logs: 100 error lines in 5 s'],['19:14:41','alert','Incident opened (rule dependency_down)'],['19:14:51','diag','Evidence collected: 12 sources, 1 failed (change feed)'],['19:14:51','diag','Diagnosis: app_db_connection_exhaustion, ranking 0.44'],['19:14:51','act','Recommended action: escalate to a human']],
+ ev:[['EV-034','metric','app-db db_refused: 0 → 1 over 61 samples',1],['EV-015','metric','api dependency_up:app-db: 1 → 0'],['EV-024','metric','worker dependency_up:app-db: 1 → 0'],['EV-028','metric','app-db cd_service_up = 1'],['EV-025','logs','worker: 100 lines, 100 error-level (text is untrusted)'],['EV-035','change','Change feed unavailable; deploys not observed']],
+ logs:['{"level":"error","service":"worker","msg":"job failed","error":"OperationalError"}','{"level":"error","service":"worker","msg":"job failed","error":"OperationalError"}','{"level":"error","service":"api","msg":"redis connection failed","error":"Timeout connecting to server"}'],
+ verify:null},
+'INC-0002':{id:'INC-0002',title:'worker stopped processing jobs',state:'remediating',step:2,sev:'medium',opened:'19:02:10Z',age:'12 m',svcs:['worker'],
+ cause:'worker_crash',conf:.65,basis:['evidence coverage 0.80','2 independent signal types (metric, log)','contradiction share 0.00'],
+ sum:'The worker process is down; its queue series disappeared at 19:02, which is how a dead worker looks here.',
+ claims:[['observation','cd_service_up for worker is 0 since 19:02:08','EV-041'],['observation','The queue length series is absent, not rising (the worker exports it)','EV-043'],['observation','Container exited with code 137','EV-044']],contra:[],
+ unk:['Why the process exited is not visible from telemetry.'],alts:[['redis_unavailable','rejected','redis answers its probe']],
+ action:{id:'restart_container',why:'Restarting a stateless worker is low-impact and reversible.'},
+ plan:{hash:'sha256:7b1e…c40a',risk:'medium',target:'cd-worker',cmd:'docker restart cd-worker',expires:'4 min',layer1:'pass (I-01 … I-08)',layer2:'allow with approval'},
+ tl:[['19:02:08','alert','worker down (cd_service_up = 0)'],['19:02:10','alert','Incident opened'],['19:02:40','diag','Diagnosis: worker_crash, ranking 0.65'],['19:02:41','act','Plan proposed: restart cd-worker (medium risk)'],['19:02:41','act','Policy: allow with approval']],
+ ev:[['EV-041','metric','worker cd_service_up: 1 → 0',1],['EV-043','metric','worker queue length series absent'],['EV-044','change','container cd-worker exited (137)']],logs:['{"level":"info","service":"worker","msg":"worker starting"}'],verify:null},
+'INC-0001':{id:'INC-0001',title:'Redis outage',state:'closed',step:4,sev:'high',opened:'18:21:03Z',age:'closed',svcs:['redis','api','worker'],
+ cause:'redis_unavailable',conf:.82,basis:['evidence coverage 0.91','3 independent signal types','contradiction share 0.00'],
+ sum:'Redis was unreachable; api and worker failed on every cache and queue call. Restarting it restored service.',
+ claims:[['observation','redis cd_service_up = 0','EV-005'],['inference','api error ratio 0.97 after redis went down','EV-009']],contra:[],unk:[],alts:[],
+ action:{id:'restart_container',why:'Approved by an approver at 18:24.'},plan:{hash:'sha256:a91f…02d8',risk:'medium',target:'cd-redis',cmd:'docker restart cd-redis',expires:'—',layer1:'pass',layer2:'allow with approval',done:'Approved by m.rao at 18:24:12Z'},
+ tl:[['18:21:03','alert','redis down'],['18:21:30','diag','Diagnosis: redis_unavailable, 0.82'],['18:24:12','act','Plan approved by m.rao'],['18:24:20','act','cd-redis restarted'],['18:25:30','good','Verification passed: 7 of 7 checks']],
+ ev:[['EV-005','metric','redis cd_service_up: 1 → 0',1],['EV-009','metric','api error_ratio: 0.01 → 0.97']],logs:[],
+ verify:{verdict:'recovered',checks:[['Service answers its probe',1],['Error ratio below 0.02',1],['p95 below 0.5 s',1],['Queue drains',1],['Independent probe URL ok',1],['No relapse in 60 s',1],['Dependents healthy',1]]}}};
+const AUDIT=[['19:14:51','system','diagnosis.created','INC-0003','a3f9…71c2'],['19:14:41','system','incident.opened','INC-0003','5be0…9a14'],['19:02:41','system','policy.decision (allow_with_approval)','INC-0002','c8d1…0e3b'],['19:02:10','system','incident.opened','INC-0002','1f77…aa90'],['18:25:30','system','verification.recorded (recovered)','INC-0001','90ce…5d21'],['18:24:20','actuator','execution.completed','INC-0001','be42…c7f0'],['18:24:12','m.rao','plan.approved','INC-0001','6d03…81ab']];
+const ROLES={viewer:{label:'Viewer',desc:'Read-only: status, incidents, diagnosis summaries.',p:['view']},
+ operator:{label:'Operator',desc:'Viewer plus raw logs and evidence, and re-running a diagnosis.',p:['view','logs','diagnose']},
+ approver:{label:'Approver',desc:'Operator plus approving or rejecting remediation plans.',p:['view','logs','diagnose','decide']},
+ admin:{label:'Admin',desc:'Everything, including the audit log and role assignment.',p:['view','logs','diagnose','decide','audit','access']}};
+const PERMS=[['view','View status, incidents, diagnosis'],['logs','View raw evidence and logs'],['diagnose','Re-run a diagnosis'],['decide','Approve or reject plans'],['audit','View the audit log'],['access','Manage roles and sessions']];
+
+/* ---------- state ---------- */
+const S={view:'overview',inc:'INC-0003',tab:'summary',role:'operator',env:'rbac',filter:'all',menu:false,theme:null,node:'app-db',confirm:null,decided:{},rediag:false};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const eff=()=>S.env==='open'?'admin':S.role;
+const can=p=>ROLES[eff()].p.includes(p);
+const pill=(st)=>`<span class="pill ${ST[st][1]}">${ST[st][0]}</span>`;
+const stPill=s=>({closed:'<span class="pill p-ok">closed · recovered</span>',remediating:'<span class="pill p-warn">awaiting approval</span>',diagnosed:'<span class="pill p-bad">needs a human</span>'}[s]||s);
+function toast(t){const e=document.getElementById('toast');e.textContent=t;e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,3200)}
+function spark(a,st){const w=240,h=34,mx=Math.max(...a,1),mn=Math.min(...a),r=mx-mn||1;const pts=a.map((v,i)=>[i*(w/(a.length-1)),h-3-((v-mn)/r)*(h-8)]);const d=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');const c={ok:'var(--ok)',warn:'var(--warn)',bad:'var(--bad)'}[st]||'var(--unk)';const last=pts[pts.length-1];
+ return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="trend"><path d="${d} L${w} ${h} L0 ${h} Z" fill="${c}" opacity=".13"/><path d="${d}" fill="none" stroke="${c}" stroke-width="1.8"/><circle cx="${last[0]-2}" cy="${last[1]}" r="3" fill="${c}"/></svg>`}
+const gate=(p,why)=>can(p)?'':`<div class="lock"><span aria-hidden="true">🔒</span><span>${why} Your role: <b>${ROLES[eff()].label}</b>.</span></div>`;
+
+/* ---------- views ---------- */
+function vOverview(){
+ const open=Object.values(INC).filter(i=>i.state!=='closed');const need=open.filter(i=>i.state==='remediating'||i.sev==='high');
+ const cnt=k=>SVC.filter(s=>s.st===k).length;
+ return `<div class="head"><div><h1>Overview</h1><p>What is broken, what Cloud Doctor is doing about it, and what needs you.</p></div><span class="tag">sample data from the sandbox run</span></div>
+ <div class="grid g-sum" style="margin-bottom:20px">
+  <div class="panel stat ${open.length?'hot':''}"><b>${open.length}</b><span>open incidents</span></div>
+  <div class="panel stat"><b style="color:var(--bad)">${cnt('bad')}</b><span>services unhealthy</span></div>
+  <div class="panel stat"><b style="color:var(--warn)">${cnt('warn')}</b><span>degraded</span></div>
+  <div class="panel stat"><b style="color:var(--ok)">${cnt('ok')}</b><span>healthy</span></div>
+  <div class="panel stat"><b>1</b><span>plan waiting for approval</span></div></div>
+ <div class="two" style="margin-bottom:24px"><section class="panel"><div class="ph"><h2>Needs attention</h2><span class="muted">${need.length} items, newest first</span></div>
+  ${need.map(i=>`<button class="need" data-inc="${i.id}"><span class="sev ${i.sev==='high'?'high':''}"></span><span><b>${esc(i.title)}</b><br><span class="muted">${i.id} · ${i.svcs.join(', ')} · opened ${i.age} ago · ${esc(i.cause)}</span></span><span class="go">${i.state==='remediating'?(can('decide')?'<span class="pill p-warn">Review &amp; approve</span>':'<span class="pill p-unk">Awaiting an approver</span>'):'<span class="pill p-bad">Decide next step</span>'}</span></button>`).join('')||'<div class="pad muted">Nothing needs you.</div>'}</section>
+  <aside class="panel pad" style="display:grid;gap:10px"><h2>Automation</h2><div class="row2"><span class="pill p-ok">Detecting</span> <span class="pill p-acc">Recommend-only</span></div>
+  <p class="muted" style="margin:0">Cloud Doctor proposes actions. Policy checks every plan, and anything of medium risk or above waits for an approver.</p>
+  <dl class="kv"><dt>Policy</dt><dd>Layer 1 active · Layer 2 off</dd><dt>Actuator</dt><dd>not connected</dd><dt>LLM</dt><dd>off (deterministic)</dd></dl></aside></div>
+ <div class="head" style="margin-bottom:10px"><h2>Services</h2><span class="muted">Select a service to see dependencies and incidents</span></div>
+ <div class="grid g-svc">${SVC.map(s=>`<button class="panel svc st-${s.st}" data-svc="${s.n}"><div class="r"><span class="nm">${s.n}</span>${pill(s.st)}</div><div class="muted">${s.kind.replace('_',' ')}</div>
+  <dl><dt>Availability</dt><dd>${s.av}</dd><dt>Latency</dt><dd>${s.p95}</dd><dt>Load</dt><dd>${s.tp}</dd>${s.inc?`<dt>Incident</dt><dd><a href="#" data-inc="${s.inc}">${s.inc}</a></dd>`:''}</dl>${spark(s.sp,s.st)}</button>`).join('')}</div>`}
+
+function vTopology(){
+ const P={loadgen:[110,70],api:[330,70],worker:[330,210],redis:[560,50],'app-db':[560,230]};const E=[['loadgen','api'],['api','redis'],['api','app-db'],['worker','redis'],['worker','app-db']];
+ const col=s=>({ok:'var(--ok)',warn:'var(--warn)',bad:'var(--bad)',unk:'var(--unk)'}[s]);const sv=SVC.find(x=>x.n===S.node);const bad=(a,b)=>['bad','warn'].includes(SVC.find(x=>x.n===b).st)&&SVC.find(x=>x.n===a).st==='bad';
+ return `<div class="head"><div><h1>Topology</h1><p>Who depends on whom. A dashed red line is a dependency that is failing right now.</p></div></div>
+ <div class="two"><section class="panel pad"><svg class="topo" viewBox="0 0 700 300" role="img" aria-label="service dependency graph">
+ <defs><marker id="ar" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L8 4L0 8z" fill="var(--faint)"/></marker></defs>
+ ${E.map(([a,b])=>`<path class="e ${bad(a,b)?'bad':''}" marker-end="url(#ar)" d="M${P[a][0]+60} ${P[a][1]+22}L${P[b][0]-2} ${P[b][1]+22}"/>`).join('')}
+ ${SVC.map(s=>`<g class="nd" data-node="${s.n}" tabindex="0" role="button" aria-label="${s.n} ${ST[s.st][0]}"><rect x="${P[s.n][0]-0}" y="${P[s.n][1]}" width="120" height="46" rx="10" stroke="${col(s.st)}" ${s.st==='unk'?'stroke-dasharray="5 3"':''} ${S.node===s.n?'style="stroke-width:3.5"':''}/><text x="${P[s.n][0]+14}" y="${P[s.n][1]+20}">${s.n}</text><text class="s" x="${P[s.n][0]+14}" y="${P[s.n][1]+36}">${ST[s.st][0].toLowerCase()}</text></g>`).join('')}</svg></section>
+ <aside class="panel drawer"><div class="r" style="display:flex;justify-content:space-between"><h2>${sv.n}</h2>${pill(sv.st)}</div><span class="muted">${sv.kind.replace('_',' ')}</span>
+ <dl class="kv"><dt>Availability</dt><dd>${sv.av}</dd><dt>Latency</dt><dd>${sv.p95}</dd><dt>Load</dt><dd>${sv.tp}</dd><dt>Depends on</dt><dd>${sv.dep.join(', ')||'nothing'}</dd><dt>Used by</dt><dd>${SVC.filter(x=>x.dep.includes(sv.n)).map(x=>x.n).join(', ')||'nothing'}</dd></dl>${spark(sv.sp,sv.st)}
+ ${sv.inc?`<button class="btn pri" data-inc="${sv.inc}">Open ${sv.inc}</button>`:'<span class="muted">No open incident.</span>'}</aside></div>`}
+
+function vIncidents(){
+ const L=Object.values(INC).filter(i=>S.filter==='all'||(S.filter==='open'?i.state!=='closed':i.state==='closed'));
+ return `<div class="head"><div><h1>Incidents</h1><p>One row per problem. Related failures are grouped, so one cause is one incident.</p></div>
+ <div class="chips" role="group" aria-label="filter">${[['all','All'],['open','Open'],['closed','Closed']].map(([k,t])=>`<button data-filter="${k}" aria-pressed="${S.filter===k}">${t}</button>`).join('')}</div></div>
+ <section class="panel"><div class="row hd"><span>ID</span><span>Problem</span><span>Status</span><span>Likely cause</span><span>Opened</span></div>
+ ${L.map(i=>`<button class="row" data-inc="${i.id}"><span class="mono">${i.id}</span><span><b>${esc(i.title)}</b><br><span class="muted">${i.svcs.join(' · ')}</span></span><span>${stPill(i.state)}</span><span class="mono muted">${i.cause}<br>ranking ${i.conf.toFixed(2)}</span><span class="muted">${i.opened}<br>${i.age}</span></button>`).join('')}</section>
+ <p class="proto">Design note: INC-0003 covers api, worker and app-db as one incident. The running backend currently opens one per dependent; this is the target behaviour.</p>`}
+
+function steps(i){const n=['Detected','Diagnosed','Acting','Verified'];const sub=['rule dependency_down','ranking '+i.conf.toFixed(2),i.state==='closed'?'restart approved':i.state==='remediating'?'waiting for approval':'needs a human',i.verify?'7 of 7 checks':'not started'];
+ return `<div class="steps" role="list">${n.map((t,k)=>`<div class="step ${k<i.step?'done':k===i.step?'now '+(i.state!=='closed'?'stuck':''):''}" role="listitem">${t}<small>${sub[k]}</small></div>`).join('')}</div>`}
+
+function decision(i){
+ if(i.plan&&i.plan.done||S.decided[i.id]){const d=S.decided[i.id]||i.plan.done;return `<section class="panel decide ok pad"><h2>Decision</h2><p style="margin:8px 0 0"><span class="pill p-ok">${esc(d)}</span></p></section>`}
+ if(!i.plan){return `<section class="panel decide pad" style="display:grid;gap:10px"><h2>Needs a human</h2><p style="margin:0">${esc(i.action.why)}</p>
+  <div class="note w">Suggested by the evidence: free or raise app-db connections (find the client holding them), then Cloud Doctor verifies recovery.</div>
+  <div class="btns"><button class="btn pri" data-ack="1">Take ownership</button><button class="btn" data-tab="diagnosis">Read diagnosis</button></div></section>`}
+ const p=i.plan,c=S.confirm;
+ return `<section class="panel decide pad" style="display:grid;gap:12px"><div class="ph" style="padding:0;border:0"><h2>Approve this action?</h2><span class="pill p-warn">risk ${p.risk}</span></div>
+  <div class="mono" style="background:var(--bg);border:1px solid var(--line);padding:10px 12px;border-radius:8px">$ ${esc(p.cmd)}</div>
+  <dl class="kv"><dt>Target</dt><dd>${p.target}</dd><dt>Policy</dt><dd>Layer 1 ${p.layer1}<br>Layer 2 ${p.layer2}</dd><dt>Plan hash</dt><dd class="mono">${p.hash}</dd><dt>Expires in</dt><dd>${p.expires}</dd></dl>
+  <div class="note">Your decision is bound to this exact plan. If the plan changes, the approval is void.</div>
+  ${can('decide')?(c?`<label for="why" class="muted">Reason for ${c==='approve'?'approving':'rejecting'} (saved in the audit log)</label><textarea id="why" placeholder="e.g. worker is stateless, queue is empty"></textarea><div class="btns"><button class="btn ${c==='approve'?'pri':'bad'}" data-go="${c}">Confirm ${c}</button><button class="btn" data-confirm="">Cancel</button></div>`:`<div class="btns"><button class="btn pri" data-confirm="approve">Approve</button><button class="btn bad" data-confirm="reject">Reject</button></div>`):gate('decide','Only approvers and admins can approve or reject plans.')}</section>`}
+
+function tabBody(i){const t=S.tab;
+ if(t==='summary')return `<div class="panel pad" style="display:grid;gap:12px"><h2>What happened</h2><p style="margin:0;font-size:15px">${esc(i.sum)}</p>
+  <div class="note"><b>Likely cause:</b> <span class="mono">${i.cause}</span> · ranking ${i.conf.toFixed(2)} <span class="muted">(a ranking aid, not a probability)</span></div>
+  <div class="cols"><div><h3>Affected</h3><p class="chips" style="margin:6px 0">${i.svcs.map(s=>`<span class="tag">${s}</span>`).join('')}</p></div><div><h3>Not known yet</h3><ul style="margin:6px 0;padding-left:18px">${i.unk.map(u=>`<li>${esc(u)}</li>`).join('')||'<li>Nothing outstanding.</li>'}</ul></div></div></div>
+  <div class="panel pad" style="margin-top:16px"><h2 style="margin-bottom:8px">Recent events</h2>${tl(i.tl.slice(-4))}</div>`;
+ if(t==='timeline')return `<div class="panel pad"><p class="muted" style="margin:0 0 10px">Ordered by event time (UTC). Suppressed events stay visible.</p>${tl(i.tl)}</div>`;
+ if(t==='evidence'){return `<section class="panel"><div class="ph"><h2>Evidence</h2><span class="muted">${i.ev.length} items</span></div>${i.ev.map(e=>`<div class="evrow ${e[3]?'f':''}"><span class="mono">${e[0]}</span><span class="tag" style="justify-self:start">${e[1]}</span><span>${esc(e[2])}</span><span>${e[3]?'<span class="pill p-acc">key</span>':''}</span></div>`).join('')}</section>
+  ${i.logs.length?`<section class="panel pad" style="margin-top:16px"><div class="ph" style="padding:0 0 10px;border:0"><h2>Log lines</h2><span class="pill p-warn">untrusted text</span></div>${can('logs')?`<div class="logs">${i.logs.map(l=>`<div class="${l.includes('error')?'e':''}">${esc(l)}</div>`).join('')}</div>`:gate('logs','Raw logs need the Operator role or above.')}</section>`:''}`}
+ if(t==='diagnosis')return `<section class="panel hyp"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><h2 class="mono" style="font-family:var(--mono)">#1 ${i.cause}</h2><span class="pill p-acc">candidate</span></div>
+  <div class="bar" role="img" aria-label="ranking ${i.conf}"><i style="width:${i.conf*100}%"></i></div><span class="muted">ranking ${i.conf.toFixed(2)} · orders hypotheses, not a probability</span>
+  <ul class="muted" style="margin:8px 0;padding-left:18px">${i.basis.map(b=>`<li>${b}</li>`).join('')}</ul>
+  <div class="cols"><div><h3>Supporting</h3><ul class="claims">${i.claims.map(c=>`<li><span class="tag">${c[0]}</span><span>${esc(c[1])}</span><a href="#" class="mono" data-tab="evidence">${c[2]}</a></li>`).join('')}</ul></div>
+  <div><h3>Contradicting</h3>${i.contra.length?'':'<p class="muted" style="margin:6px 0">None recorded. That is not proof there is none.</p>'}<h3 style="margin-top:14px">Alternatives</h3><ul class="claims">${i.alts.map(a=>`<li><span class="tag">${a[1]}</span><span><span class="mono">${a[0]}</span><br><span class="muted">${a[2]}</span></span><span></span></li>`).join('')||'<li class="muted">None considered.</li>'}</ul></div></div>
+  <div style="margin-top:14px" class="btns">${can('diagnose')?`<button class="btn" data-rediag="1">${S.rediag?'Running…':'Re-run diagnosis'}</button>`:gate('diagnose','Re-running a diagnosis needs the Operator role or above.')}</div></section>`;
+ if(t==='remediation')return `<div class="panel pad" style="display:grid;gap:10px"><h2>Remediation</h2><p style="margin:0"><b>Recommended:</b> <span class="mono">${i.action.id}</span></p><p class="muted" style="margin:0">${esc(i.action.why)}</p>${i.plan?`<dl class="kv"><dt>Command</dt><dd class="mono">${esc(i.plan.cmd)}</dd><dt>Policy</dt><dd>Layer 1 ${i.plan.layer1}; Layer 2 ${i.plan.layer2}</dd></dl>`:''}</div>`;
+ if(t==='verification')return i.verify?`<div class="panel pad"><h2>Verification: <span class="pill p-ok">${i.verify.verdict}</span></h2><ul class="claims" style="margin-top:12px">${i.verify.checks.map(c=>`<li><span class="pill p-ok">pass</span><span>${c[0]}</span><span></span></li>`).join('')}</ul></div>`:`<div class="panel pad muted">Verification starts after an action runs. Nothing to verify yet.</div>`;
+ return `<div class="panel pad" style="display:grid;gap:8px"><h2>Report</h2><p class="mono" style="margin:0;white-space:pre-wrap">${esc(`# ${i.id} ${i.title}\nMode: deterministic · root cause confirmed: false\nLikely cause: ${i.cause} (ranking ${i.conf})\nMitigated: ${i.state==='closed'?'yes':'no'}`)}</p><div class="btns"><button class="btn" data-copy="1">Copy as Markdown</button></div></div>`}
+function tl(a){return `<ol class="tl">${a.map(e=>`<li><time>${e[0]}</time><span class="n ${e[1]}"></span><span>${esc(e[2])}</span></li>`).join('')}</ol>`}
+
+function vIncident(){const i=INC[S.inc];const T=['summary','timeline','evidence','diagnosis','remediation','verification','report'];
+ return `<p style="margin:0 0 12px"><a href="#" data-view="incidents">← Incidents</a></p>
+ <div class="head" style="margin-bottom:0"><div><span class="mono muted">${i.id} · opened ${i.opened}</span><h1>${esc(i.title)}</h1></div>${stPill(i.state)}</div>${steps(i)}
+ <div class="two"><div><div class="tabs" role="tablist">${T.map(t=>`<button role="tab" data-tab="${t}" aria-selected="${S.tab===t}">${t[0].toUpperCase()+t.slice(1)}</button>`).join('')}</div>${tabBody(i)}</div>
+ <aside class="rail">${decision(i)}<section class="panel pad"><h3 style="margin-bottom:8px">Affected services</h3><div style="display:grid;gap:8px">${i.svcs.map(n=>{const s=SVC.find(x=>x.n===n);return `<button class="chip" data-svc="${n}" style="justify-content:space-between;width:100%">${n}${pill(s.st)}</button>`}).join('')}</div></section></aside></div>`}
+
+function vAudit(){if(!can('audit'))return deny('Audit log','audit','Admins only.');
+ return `<div class="head"><div><h1>Audit log</h1><p>Every detection, decision and action, chained by hash so tampering is visible.</p></div><div class="chain"><span class="pill p-ok">chain valid</span><span class="muted">${AUDIT.length} events</span></div></div>
+ <section class="panel scroll"><table class="mx" style="min-width:640px"><thead><tr><th>Time</th><th>Actor</th><th>Event</th><th>Incident</th><th>Hash</th></tr></thead><tbody>${AUDIT.map(a=>`<tr><td class="mono" style="text-align:left">${a[0]}</td><td style="text-align:left">${a[1]}</td><td style="text-align:left">${a[2]}</td><td class="mono">${a[3]}</td><td class="mono muted">${a[4]}</td></tr>`).join('')}</tbody></table></section>`}
+function deny(t,p,who){return `<div class="head"><h1>${t}</h1></div><div class="panel pad" style="max-width:520px;display:grid;gap:10px"><h2>You don't have access</h2><p class="muted" style="margin:0">${who} Ask an admin for the role, or switch role from the menu at the top right (prototype only).</p></div>`}
+function vAccess(){if(!can('access'))return deny('Access','access','Only admins manage roles.');
+ const me=eff();return `<div class="head"><div><h1>Access</h1><p>Roles decide what each person can see and do. Hidden or locked controls always say why.</p></div></div>
+ <section class="panel scroll"><table class="mx" style="min-width:560px"><thead><tr><th>Permission</th>${Object.entries(ROLES).map(([k,r])=>`<th class="${k===me?'me':''}">${r.label}</th>`).join('')}</tr></thead><tbody>${PERMS.map(([k,t])=>`<tr><td>${t}</td>${Object.entries(ROLES).map(([rk,r])=>`<td class="${rk===me?'me':''}">${r.p.includes(k)?'<span class="yes">✓</span>':'<span class="no">—</span>'}</td>`).join('')}</tr>`).join('')}</tbody></table></section>
+ <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr));margin-top:18px"><section class="panel pad" style="display:grid;gap:8px"><h2>Environment access mode</h2><p class="muted" style="margin:0">Set by the deployment, not by users.</p>
+ <dl class="kv"><dt>rbac</dt><dd>Sign in, roles apply. Default for any real environment.</dd><dt>open</dt><dd>No sign-in. Everyone acts as Super Admin. For testing and demos only.</dd></dl>
+ <div class="btns"><button class="btn ${S.env==='rbac'?'pri':''}" data-env="rbac">rbac</button><button class="btn ${S.env==='open'?'pri':''}" data-env="open">open (test)</button></div></section>
+ <section class="panel pad" style="display:grid;gap:8px"><h2>Safety rules</h2><ul style="margin:0;padding-left:18px"><li>Open mode shows a banner on every page.</li><li>Open mode is refused when the API listens on a non-local address, unless explicitly overridden.</li><li>Every decision is logged with the actor, including <span class="mono">open-mode</span>.</li></ul></section></div>`}
+
+/* ---------- shell ---------- */
+function shell(body){const open=Object.values(INC).filter(i=>i.state!=='closed').length;const r=ROLES[eff()];
+ const nav=[['overview','Overview'],['topology','Topology'],['incidents','Incidents'],['audit','Audit'],['access','Access']].filter(([k])=>k!=='audit'||can('audit')||true);
+ return `<header class="top"><div class="wrap"><span class="brand"><i></i>Cloud Doctor</span>
+ <nav aria-label="Main">${nav.map(([k,t])=>`<button data-view="${k}" ${(S.view===k||(S.view==='incident'&&k==='incidents'))?'aria-current="page"':''}>${t}${k==='incidents'?`<span class="dot">${open}</span>`:''}${(k==='audit'&&!can('audit'))||(k==='access'&&!can('access'))?' 🔒':''}</button>`).join('')}</nav>
+ <div class="tools"><span class="chip" title="Live event stream"><span class="live"></span>Live</span><button class="chip" data-theme="1" aria-label="Toggle theme">◐ Theme</button>
+ <div class="rel"><button class="chip" data-menu="1" aria-haspopup="true" aria-expanded="${S.menu}">${S.env==='open'?'<span class="pill p-warn" style="padding:0 6px">OPEN</span>':'👤'} ${S.env==='open'?'Super Admin':r.label} ▾</button>
+ ${S.menu?`<div class="menu" role="menu"><div class="muted" style="padding:4px 8px">Prototype: simulate who is signed in</div>${Object.entries(ROLES).map(([k,x])=>`<button class="opt" role="menuitemradio" aria-checked="${S.role===k&&S.env==='rbac'}" data-role="${k}"><span style="width:16px">${S.role===k&&S.env==='rbac'?'●':'○'}</span><span><b>${x.label}</b><small>${x.desc}</small></span></button>`).join('')}<hr><button class="opt" aria-checked="${S.env==='open'}" data-env="${S.env==='open'?'rbac':'open'}"><span style="width:16px">${S.env==='open'?'●':'○'}</span><span><b>Open test mode</b><small>Environment role = open: everyone is Super Admin</small></span></button></div>`:''}</div></div></div></header>
+ ${S.env==='open'?`<div class="strip open"><div class="wrap"><b>Open test mode.</b> No sign-in; every visitor has Super Admin rights. Do not expose this environment.<a href="#" data-env="rbac">Switch to role-based access</a></div></div>`:''}
+ <div class="wrap"><main>${body}</main></div>`}
+function render(){const v={overview:vOverview,topology:vTopology,incidents:vIncidents,incident:vIncident,audit:vAudit,access:vAccess}[S.view]();document.getElementById('app').innerHTML=shell(v)}
+
+/* ---------- events ---------- */
+document.addEventListener('click',e=>{const t=e.target.closest('[data-view],[data-inc],[data-svc],[data-tab],[data-filter],[data-menu],[data-role],[data-env],[data-theme],[data-confirm],[data-go],[data-rediag],[data-node],[data-ack],[data-copy]');
+ if(!t){if(S.menu){S.menu=false;render()}return}
+ const d=t.dataset;if(t.tagName==='A')e.preventDefault();
+ if('menu' in d){S.menu=!S.menu}
+ else if(d.role){S.role=d.role;S.env='rbac';S.menu=false;toast('Signed in as '+ROLES[d.role].label+' (simulated)');if(S.view==='audit'&&!can('audit')||S.view==='access'&&!can('access')){}}
+ else if(d.env){S.env=d.env;S.menu=false;toast(d.env==='open'?'Open test mode on: everyone is Super Admin':'Role-based access restored')}
+ else if('theme' in d){const r=document.documentElement;const dark=getComputedStyle(r).colorScheme.includes('dark');r.setAttribute('data-theme',dark?'light':'dark')}
+ else if(d.view){S.view=d.view;S.menu=false}
+ else if(d.inc){S.view='incident';S.inc=d.inc;S.tab='summary';S.confirm=null;S.menu=false;e.stopPropagation()}
+ else if(d.svc){S.view='topology';S.node=d.svc}
+ else if(d.node){S.node=d.node}
+ else if(d.tab){S.tab=d.tab}
+ else if(d.filter){S.filter=d.filter}
+ else if('confirm' in d){S.confirm=d.confirm||null}
+ else if(d.go){const why=(document.getElementById('why')||{}).value||'';const i=INC[S.inc];S.decided[i.id]=(d.go==='approve'?'Approved':'Rejected')+' by you just now'+(why?': '+why:'');S.confirm=null;toast('Plan '+(d.go==='approve'?'approved. The actuator will run it and verification follows.':'rejected. The incident stays open.'))}
+ else if(d.rediag){S.rediag=true;render();setTimeout(()=>{S.rediag=false;toast('Diagnosis re-run: same top cause, ranking unchanged');render()},1200);return}
+ else if(d.ack){toast('You now own INC-0003 (logged in the audit trail)')}
+ else if(d.copy){try{navigator.clipboard.writeText('# '+INC[S.inc].id).then(()=>toast('Copied'),()=>toast('Copy blocked: select the text instead'))}catch(_){toast('Copy blocked: select the text instead')}}
+ render();window.scrollTo({top:d.view||d.inc||d.svc?0:window.scrollY})});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&S.menu){S.menu=false;render()}if((e.key==='Enter'||e.key===' ')&&e.target.dataset&&e.target.dataset.node){e.preventDefault();S.node=e.target.dataset.node;render()}});
+render();
+</script>
