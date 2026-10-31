@@ -190,3 +190,18 @@ def test_disk_full_is_diagnosed_and_not_restarted(world, catalog, cfg):
     assert any("filesystem usage is 100%" in c.text for c in t.claims)
     assert any("not identified" in u for u in t.unknowns)  # the volume is shared, the filler is unknown
     assert d.recommended_action.action_id == "escalate"  # restarting does not free the disk
+
+
+def test_db_saturation_when_the_probe_is_locked_out_still_names_exhaustion(world, catalog, cfg):
+    """At the connection limit the probe itself is refused, so the counts vanish exactly when they matter; the refusal flag remains."""
+    import copy
+
+    from fixtures import scenarios
+    data = copy.deepcopy(scenarios.ALL["db_saturation"]())
+    for metric in ("db_connections", "db_connections_by_client"):
+        data["samples"]["app-db"][metric] = [s for s in data["samples"]["app-db"][metric] if s[0] < 68]  # series end when the limit is reached
+    d, _, _ = diagnose(world, catalog, cfg, data, 150)
+    t = top(d)
+    assert t.cause_id == "app_db_connection_exhaustion"
+    assert any("refused the monitoring connection" in c.text for c in t.claims)
+    assert not any("of 100 allowed connections" in c.text and "100%" not in c.text for c in t.claims)

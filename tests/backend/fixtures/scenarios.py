@@ -61,6 +61,7 @@ class Builder:
         for svc in ("api", "worker"):
             self.put(svc, "db_call_p95", lambda t: 0.03 + abs(_noise(int(t), 0.005)))
         self.put("api", "fs_used_ratio", lambda t: 0.55 + abs(_noise(int(t), 0.002)))
+        self.put("app-db", "db_refused", 0)
         self.put("app-db", "db_connections", lambda t: 3 + abs(_noise(int(t), 1)))
         self.put("app-db", "db_max_connections", 100)
         self.put("app-db", "db_connections_by_client", {"api": 2, "worker": 1})
@@ -211,6 +212,7 @@ def db_saturation() -> dict:
     b.put("api", "dependency_up:app-db", 0, T + 8)
     b.put("worker", "dependency_up:app-db", 0, T + 8)
     # measured on the sandbox (N=1): a client holding connections shows up in cd_db_connections_by_client under its application_name
+    b.put("app-db", "db_refused", 1, T + 8)
     b.put("app-db", "db_connections", ramp(T, T + 8, 3, 100), T)
     b.put("app-db", "db_connections_by_client", lambda t: {"connection_hog": 94, "api": 4, "worker": 2} if t >= T + 8 else {"connection_hog": round(ramp(T, T + 8, 0, 94)(t)), "api": 2, "worker": 1}, T)
     b.put("api", "error_ratio", ramp(T + 5, T + 15, 0.004, 0.62), T + 5)
