@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cloud-doctor-policy"
+version = "0.1.0"
+description = "Cloud Doctor Layer 2: fail-closed OPA REST client and restrictive-only Rego client policies."
+requires-python = ">=3.12"
+dependencies = []   # urllib only; composes with the standard-library `invariants` package
+
+[project.optional-dependencies]
+dev = ["pytest==9.2.0"]
+
+[tool.setuptools]
+packages = ["cd_policy"]

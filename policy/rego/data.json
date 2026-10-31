@@ -1,0 +1,13 @@
+{
+  "client": {
+    "min_confidence": 0.8,
+    "freeze_windows": [
+      {"start": "2026-12-24T00:00:00Z", "end": "2026-12-27T00:00:00Z"}
+    ],
+    "service_allowlist": {
+      "api": ["restart_service", "rollback_service", "escalate"],
+      "worker": ["restart_service", "escalate"],
+      "redis": ["restart_service", "clear_cache", "escalate"]
+    }
+  }
+}
