@@ -95,6 +95,7 @@ services:
       SERVICE_NAME: probes
       REDIS_HOST: cd-redis
       DB_HOST: cd-app-db
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?}   # same sandbox credential as api and worker; read-only queries (pg_stat_activity)
 
   prometheus:
     image: prom/prometheus:v3.15.1
