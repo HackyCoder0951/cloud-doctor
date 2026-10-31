@@ -404,6 +404,11 @@ class RcaEngine:
                  static_unknowns=unknowns)
         refused = f.ts(s, "db_refused")
         if refused and refused.last == 1:
+            # the probe cannot read pg_stat_activity once the limit is reached, so a count that is still LOW next to a refusal is a
+            # stale pre-refusal sample (Prometheus lookback): it neither contradicts exhaustion nor identifies a leaker
+            if not (conns and limit and limit.last and max(v for _, v in conns.pts[-3:]) / limit.last >= 0.8):
+                c.unknowns.append(f"{s} refused the monitoring connection, so connection counts and the leaking client are unavailable (any count shown is stale)")
+                conns = limit = by_client = None
             c.need(True, 3, f"{s} refused the monitoring connection with 'too many clients': the connection limit is reached", "observation", [refused.eid], "metric")
         elif refused:
             c.need(False, 1, "", "observation", [refused.eid], "metric", bad=f"{s} accepted the monitoring connection, so its connection limit is not reached", bad_evs=[refused.eid])

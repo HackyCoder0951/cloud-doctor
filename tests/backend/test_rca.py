@@ -205,3 +205,21 @@ def test_db_saturation_when_the_probe_is_locked_out_still_names_exhaustion(world
     assert t.cause_id == "app_db_connection_exhaustion"
     assert any("refused the monitoring connection" in c.text for c in t.claims)
     assert not any("of 100 allowed connections" in c.text and "100%" not in c.text for c in t.claims)
+
+
+def test_stale_low_counts_do_not_contradict_a_refused_probe(world, catalog, cfg):
+    """Seen live: the probe was refused, but Prometheus still returned an old low count (1 of 100, 'unknown'); that stale sample must
+    not count as a contradiction or name a leaker."""
+    import copy
+
+    from fixtures import scenarios
+    data = copy.deepcopy(scenarios.ALL["db_saturation"]())
+    for metric in ("db_connections", "db_connections_by_client"):
+        data["samples"]["app-db"][metric] = [[t, 1] if metric == "db_connections" else s for s in data["samples"]["app-db"][metric] if (t := s[0]) < 10] \
+            if metric == "db_connections" else [s for s in data["samples"]["app-db"][metric] if s[0] < 10]
+    d, _, _ = diagnose(world, catalog, cfg, data, 150)
+    t = top(d)
+    assert t.cause_id == "app_db_connection_exhaustion"
+    assert not any("uses only" in c.text for c in t.contradicting)
+    assert not any("likely leaker" in c.text for c in t.claims)
+    assert any("counts and the leaking client are unavailable" in u for u in t.unknowns)
