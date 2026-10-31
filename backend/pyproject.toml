@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cloud-doctor-backend"
+version = "0.1.0"
+description = "Cloud Doctor backend core (Stream B): detector, incidents, evidence, deterministic RCA, remediation, verifier, API."
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi==0.162.0",
+    "pydantic==2.14.2",
+    "SQLAlchemy==2.1.6",
+    "jsonschema==4.26.0",
+    "referencing==0.37.0",
+    "PyYAML==6.0.3",
+    "httpx==0.28.1",
+    "uvicorn==0.54.0",
+]
+
+[project.optional-dependencies]
+postgres = ["psycopg[binary]==3.3.6"]
+dev = ["pytest==9.2.0"]
+
+[tool.setuptools]
+# The package lives in this directory itself: importable as `backend`.
+package-dir = {"backend" = "."}
+packages = [
+    "backend", "backend.domain", "backend.repositories", "backend.telemetry", "backend.detector",
+    "backend.incidents", "backend.rca", "backend.remediation", "backend.api",
+]
+include-package-data = true
+
+[tool.setuptools.package-data]
+backend = ["config/*.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["../tests/backend"]
+addopts = "-q"
