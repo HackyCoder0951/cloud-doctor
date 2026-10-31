@@ -27,8 +27,11 @@ Raw data from a service is never read by anything downstream. It is converted on
 | Python test | `test_<behaviour_as_a_sentence>` | `test_hostile_text_is_neutralised_not_interpreted` | new |
 | TypeScript variable / function | `camelCase`; type, interface and React component `PascalCase`; component file `PascalCase.tsx`; other files `camelCase.ts` | `IncidentDetail.tsx` | new |
 | API field in TypeScript | stays snake_case exactly as the contract (no renaming layer), converted only inside view-model helpers | `incident.opened_at` | new |
-| CSS design token | `--group-name`, kebab-case, by role not by value | `--surface-raised`, `--status-bad` | new |
-| CSS class | kebab-case, block-first: `block`, `block__part`, `block--variant`. State is a data attribute, not a class | `incident-row__title`, `[data-state="bad"]` | new |
+| CSS design token | `--group-name`, kebab-case, by role not by value. Groups: `surface-`, `border-`, `text-`, `status-` (with `-surface` for its background), `accent`, `font-`, `space-`, `radius-`, `shadow-` | `--surface-raised`, `--status-bad-surface` | new, applied in the template |
+| CSS class | kebab-case, block-first: `block`, `block__element`, `block--modifier`. A modifier is a fixed variant; **state and tone are data attributes**, not classes | `attention-item__severity`, `pill[data-tone="bad"]`, `stepper__step[data-state="done"]` | new, applied in the template |
+| HTML data attribute | kebab-case name; value is a lower snake_case enum or a kebab-case action name. Actions are `data-action="open-incident"` plus the arguments it needs (`data-incident-id`) | `data-service-name`, `data-env-mode` | new, applied in the template |
+| Icon | inline SVG from one icon set, `aria-hidden`, coloured by `currentColor`. No emoji or text glyphs as icons | `icon('lock')` | new, applied in the template |
+| Inline style | never (`style=` is forbidden by the CSP and by `scan-forbidden`). Dynamic values use a data attribute or a native element (`<progress value>`) | `<progress value="44" max="100">` | frozen (security) |
 | Environment variable | `CD_` + UPPER_SNAKE | `CD_PROMETHEUS_URL` | existing practice |
 | Branch | `<type>/<scope>-<short-name>` | `feat/ui-redesign` | new |
 | Commit | Conventional Commits, scope = area, no attribution line | `fix(backend): …` | existing practice |
@@ -62,7 +65,16 @@ Raw data from a service is never read by anything downstream. It is converted on
 - Health bodies such as `{"status":"alive"}`, `"OK"`, `{"ok":true}`, `{"healthy":false}`, `{"status":"UP","components":{…}}`, and a bare HTTP status when the body says nothing.
 - Truncated JSON, plain text, hostile text and field floods.
 
-## 5. Decisions and open points
+## 5. Frontend template
+
+[`docs/dev/frontend/ux-prototype.html`](frontend/ux-prototype.html) is the reference template and follows every rule above. When the screens are ported to the Next.js app, copy its token names, class names and data attributes unchanged.
+
+- **Data in the template** uses the contract's field names (`incident_id`, `opened_at`, `top_cause`, `cause_id`, `evidence_ids`, `health_state`) and lower snake_case enum values. Only `health_state` is upper-case (`HEALTHY` …), as the frozen contract has it. Roles and permissions are lower snake_case ids (`viewer`, `decide_plans`).
+- **Code in the template** is camelCase (`renderIncidentDetail`, `ui.pendingDecision`); render functions are `renderX`; one handler per `data-action` value in a single `actions` map keyed by the kebab-case name.
+- **Tone mapping** is in one place (`healthTone`): `HEALTHY→ok`, `DEGRADED→warn`, `UNHEALTHY→bad`, `UNKNOWN→unknown`. A status is always shown with a shape as well as a colour.
+- **Checked** by an audit of the template: 0 inline `style` attributes, 0 emoji, every class defined in the CSS and matching `block__element--modifier` in kebab-case.
+
+## 6. Decisions and open points
 
 1. **Two health vocabularies.** The frozen `HealthState` (`HEALTHY` …) describes a *service* after the detector has judged it. `up / degraded / down / unknown` describes one *raw health answer*. They are kept apart on purpose so a single probe never claims a verdict.
 2. **Numeric log levels follow pino/bunyan.** Syslog uses different numbers; if a service ever logs syslog numbers, the mapping must be chosen per source.

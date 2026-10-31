@@ -3,329 +3,506 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: sticky top bar + status strip, content column (max 1360), incident page = main column + sticky decision rail.
-   Dark-first ops console. Accent (periwinkle) is separate from semantic ok / warn / bad / unknown. */
+/* Conventions: docs/dev/conventions.md.
+   Tokens are --group-name by role. Classes are block, block__element, block--modifier (kebab-case).
+   State and tone live in data attributes: data-tone, data-state, data-selected. No inline styles anywhere.
+   Layout: sticky top bar, content column (max 1360), incident page = main column + sticky decision rail. */
 :root {
-  --bg:#0c1014; --bg2:#111820; --panel:#151d26; --panel2:#1a242f; --line:#263340; --line2:#33434f;
-  --fg:#e7edf3; --muted:#8fa0b0; --faint:#5f7080; --accent:#8da7ff; --accent-bg:#1b2442; --accent-fg:#0c1014;
-  --ok:#4fd18b; --ok-bg:#12281f; --warn:#f0b64a; --warn-bg:#2d2411; --bad:#ff7a70; --bad-bg:#33171a; --unk:#a5b2bf; --unk-bg:#222c36;
-  --shadow:0 8px 28px rgba(0,0,0,.35);
-  --display:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif; --body:'Onest','Segoe UI',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+  --surface-page:#0c1014; --surface-chrome:#111820; --surface-panel:#151d26; --surface-raised:#1a242f;
+  --border-subtle:#263340; --border-strong:#33434f;
+  --text-primary:#e7edf3; --text-muted:#8fa0b0; --text-faint:#5f7080;
+  --accent:#8da7ff; --accent-surface:#1b2442; --accent-contrast:#0c1014;
+  --status-ok:#4fd18b; --status-ok-surface:#12281f; --status-warn:#f0b64a; --status-warn-surface:#2d2411;
+  --status-bad:#ff7a70; --status-bad-surface:#33171a; --status-unknown:#a5b2bf; --status-unknown-surface:#222c36;
+  --shadow-popover:0 8px 28px rgba(0,0,0,.35);
+  --font-display:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif; --font-body:'Onest','Segoe UI',system-ui,sans-serif; --font-mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:24px; --radius-panel:12px; --radius-control:8px;
   color-scheme:dark;
 }
 @media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
-  --bg:#f3f6f9; --bg2:#ffffff; --panel:#ffffff; --panel2:#eef2f6; --line:#d8e0e8; --line2:#c3cfda;
-  --fg:#16212b; --muted:#566677; --faint:#8696a6; --accent:#3a55c8; --accent-bg:#e4e9fb; --accent-fg:#ffffff;
-  --ok:#17803f; --ok-bg:#dff4e7; --warn:#8a5a00; --warn-bg:#fff0cc; --bad:#b42318; --bad-bg:#fde4e1; --unk:#4a5866; --unk-bg:#e8edf2;
-  --shadow:0 8px 24px rgba(30,50,70,.12); color-scheme:light;}}
+  --surface-page:#f3f6f9; --surface-chrome:#ffffff; --surface-panel:#ffffff; --surface-raised:#eef2f6;
+  --border-subtle:#d8e0e8; --border-strong:#c3cfda; --text-primary:#16212b; --text-muted:#566677; --text-faint:#8696a6;
+  --accent:#3a55c8; --accent-surface:#e4e9fb; --accent-contrast:#ffffff;
+  --status-ok:#17803f; --status-ok-surface:#dff4e7; --status-warn:#8a5a00; --status-warn-surface:#fff0cc;
+  --status-bad:#b42318; --status-bad-surface:#fde4e1; --status-unknown:#4a5866; --status-unknown-surface:#e8edf2;
+  --shadow-popover:0 8px 24px rgba(30,50,70,.12); color-scheme:light;}}
 :root[data-theme="light"]{
-  --bg:#f3f6f9; --bg2:#ffffff; --panel:#ffffff; --panel2:#eef2f6; --line:#d8e0e8; --line2:#c3cfda;
-  --fg:#16212b; --muted:#566677; --faint:#8696a6; --accent:#3a55c8; --accent-bg:#e4e9fb; --accent-fg:#ffffff;
-  --ok:#17803f; --ok-bg:#dff4e7; --warn:#8a5a00; --warn-bg:#fff0cc; --bad:#b42318; --bad-bg:#fde4e1; --unk:#4a5866; --unk-bg:#e8edf2;
-  --shadow:0 8px 24px rgba(30,50,70,.12); color-scheme:light;}
+  --surface-page:#f3f6f9; --surface-chrome:#ffffff; --surface-panel:#ffffff; --surface-raised:#eef2f6;
+  --border-subtle:#d8e0e8; --border-strong:#c3cfda; --text-primary:#16212b; --text-muted:#566677; --text-faint:#8696a6;
+  --accent:#3a55c8; --accent-surface:#e4e9fb; --accent-contrast:#ffffff;
+  --status-ok:#17803f; --status-ok-surface:#dff4e7; --status-warn:#8a5a00; --status-warn-surface:#fff0cc;
+  --status-bad:#b42318; --status-bad-surface:#fde4e1; --status-unknown:#4a5866; --status-unknown-surface:#e8edf2;
+  --shadow-popover:0 8px 24px rgba(30,50,70,.12); color-scheme:light;}
+
 *{box-sizing:border-box}
-body{background:var(--bg);color:var(--fg);font:14px/1.5 var(--body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0}
-h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;letter-spacing:-.01em}
-h1{font-size:26px;line-height:1.15}h2{font-size:16px}h3{font-size:14px;font-family:var(--body);font-weight:600}
-a{color:var(--accent)}button,input,textarea,select{font:inherit;color:inherit}
+body{background:var(--surface-page);color:var(--text-primary);font:14px/1.5 var(--font-body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0}
+h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:26px;line-height:1.15}h2{font-size:16px}h3{font-size:14px;font-family:var(--font-body);font-weight:600}
+p{margin:0}ul,ol,dl{margin:0}a{color:var(--accent)}
+button,input,textarea{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
-.mono{font-family:var(--mono);font-size:12.5px}.muted{color:var(--muted)}.faint{color:var(--faint)}
-.wrap{max-width:1360px;margin:0 auto}
+.icon{width:1em;height:1em;vertical-align:-.125em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* layout primitives */
+.container{max-width:1360px;margin:0 auto}
+.stack{display:grid;gap:var(--space-3)}.stack--tight{gap:var(--space-2)}
+.cluster{display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center}.cluster--between{justify-content:space-between}
+.scroll-x{overflow-x:auto}
+.text-muted{color:var(--text-muted)}.text-faint{color:var(--text-faint)}.text-mono{font-family:var(--font-mono);font-size:12.5px}.text-lead{font-size:15px}
+.grid{display:grid;gap:var(--space-4)}.grid--stats{grid-template-columns:repeat(5,minmax(0,1fr))}.grid--cards{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}.grid--halves{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.grid--columns{grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px}
+@media (max-width:900px){.grid--stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.layout-split{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+@media (max-width:980px){.layout-split{grid-template-columns:minmax(0,1fr)}}
+.page{padding-block:24px 64px}
+.page-header{display:flex;gap:var(--space-4);align-items:flex-end;justify-content:space-between;flex-wrap:wrap;margin-bottom:18px}
+.page-header__lead{margin-top:var(--space-1);color:var(--text-muted);max-width:68ch}
+.section-gap{margin-bottom:var(--space-5)}
+
 /* top bar */
-.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg2);border-bottom:1px solid var(--line);margin-inline:calc(-1*max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px))}
-.top .wrap{display:flex;align-items:center;gap:18px;min-height:54px;flex-wrap:wrap;padding-block:6px}
-.brand{font:700 17px var(--display);display:flex;gap:9px;align-items:center;letter-spacing:-.01em}
-.brand i{width:22px;height:22px;border-radius:7px;background:conic-gradient(from 200deg,var(--accent),var(--ok),var(--accent));display:inline-block}
-nav{display:flex;gap:2px;flex:1;flex-wrap:wrap}
-nav button{background:none;border:0;padding:8px 12px;border-radius:7px;color:var(--muted);cursor:pointer;font-weight:500;position:relative}
-nav button:hover{color:var(--fg);background:var(--panel2)}nav button[aria-current=page]{color:var(--fg);background:var(--panel2)}
-nav .dot{background:var(--bad);color:#fff;border-radius:99px;font-size:11px;padding:0 6px;margin-left:6px;font-weight:600}
-.tools{display:flex;gap:8px;align-items:center}
-.chip{display:inline-flex;gap:7px;align-items:center;padding:4px 10px;border-radius:99px;border:1px solid var(--line2);background:var(--panel);font-size:12.5px;cursor:pointer}
-.live{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 var(--ok);animation:pulse 2s infinite}
-@keyframes pulse{70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
-@media (prefers-reduced-motion:reduce){.live{animation:none}*{transition:none!important}}
-.menu{position:absolute;right:0;top:44px;width:min(330px,92vw);background:var(--panel);border:1px solid var(--line2);border-radius:12px;box-shadow:var(--shadow);padding:10px;z-index:30}
-.menu .opt{display:flex;gap:10px;width:100%;text-align:left;background:none;border:0;padding:8px;border-radius:8px;cursor:pointer;align-items:flex-start}
-.menu .opt:hover,.menu .opt[aria-checked=true]{background:var(--panel2)}.menu .opt small{color:var(--muted);display:block}
-.menu hr{border:0;border-top:1px solid var(--line);margin:8px 0}
-.rel{position:relative}
-.strip{font-size:12.5px;padding:7px 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.strip.open{background:var(--warn-bg);color:var(--warn);margin-inline:calc(-1*max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px))}
-.strip.open .wrap{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-main{padding-block:24px 64px}
-.head{display:flex;gap:16px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;margin-bottom:18px}
-.head p{margin:4px 0 0;color:var(--muted);max-width:68ch}
-/* pills */
-.pill{display:inline-flex;align-items:center;gap:6px;padding:1px 9px;border-radius:99px;font-size:12px;font-weight:600;border:1px solid transparent;white-space:nowrap}
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface-chrome);border-bottom:1px solid var(--border-subtle);margin-inline:calc(-1*max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px))}
+.topbar__inner{display:flex;align-items:center;gap:18px;min-height:54px;flex-wrap:wrap;padding-block:6px}
+.topbar__tools{display:flex;gap:var(--space-2);align-items:center}
+.brand{font:700 17px var(--font-display);display:flex;gap:9px;align-items:center}
+.brand__mark{width:22px;height:22px;border-radius:7px;background:conic-gradient(from 200deg,var(--accent),var(--status-ok),var(--accent))}
+.main-nav{display:flex;gap:2px;flex:1;flex-wrap:wrap}
+.main-nav__item{background:none;border:0;padding:8px 12px;border-radius:7px;color:var(--text-muted);cursor:pointer;font-weight:500;display:inline-flex;gap:6px;align-items:center}
+.main-nav__item:hover{color:var(--text-primary);background:var(--surface-raised)}.main-nav__item[aria-current="page"]{color:var(--text-primary);background:var(--surface-raised)}
+.main-nav__badge{background:var(--status-bad);color:#fff;border-radius:99px;font-size:11px;padding:0 6px;font-weight:600}
+.chip{display:inline-flex;gap:7px;align-items:center;padding:4px 10px;border-radius:99px;border:1px solid var(--border-strong);background:var(--surface-panel);font-size:12.5px;cursor:pointer}
+.chip--static{cursor:default}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--status-ok);animation:live-pulse 2s infinite}
+@keyframes live-pulse{0%{box-shadow:0 0 0 0 var(--status-ok)}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+@media (prefers-reduced-motion:reduce){.live-dot{animation:none}*{transition:none!important}}
+.popover-anchor{position:relative}
+.popover{position:absolute;right:0;top:44px;width:min(330px,92vw);background:var(--surface-panel);border:1px solid var(--border-strong);border-radius:var(--radius-panel);box-shadow:var(--shadow-popover);padding:10px;z-index:30}
+.popover__option{display:flex;gap:10px;width:100%;text-align:left;background:none;border:0;padding:8px;border-radius:var(--radius-control);cursor:pointer;align-items:flex-start}
+.popover__option:hover,.popover__option[aria-checked="true"]{background:var(--surface-raised)}
+.popover__hint{display:block;color:var(--text-muted)}
+.popover__divider{border:0;border-top:1px solid var(--border-subtle);margin:8px 0}
+.popover__title{padding:4px 8px;color:var(--text-muted)}
+.mode-banner{background:var(--status-warn-surface);color:var(--status-warn);font-size:12.5px;padding:7px 0;margin-inline:calc(-1*max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px))}
+.mode-banner__inner{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+
+/* status pill, tag */
+.pill{display:inline-flex;align-items:center;gap:6px;padding:1px 9px;border-radius:99px;font-size:12px;font-weight:600;white-space:nowrap;border:1px solid transparent;color:var(--status-unknown);background:var(--status-unknown-surface)}
 .pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
-.p-ok{color:var(--ok);background:var(--ok-bg)}.p-warn{color:var(--warn);background:var(--warn-bg)}.p-bad{color:var(--bad);background:var(--bad-bg)}.p-unk{color:var(--unk);background:var(--unk-bg);border:1px dashed var(--unk)}.p-acc{color:var(--accent);background:var(--accent-bg)}
-.p-bad::before{border-radius:2px}.p-warn::before{border-radius:1px;transform:rotate(45deg)}.p-unk::before{background:none;border:1.5px dashed currentColor}
-.tag{font-family:var(--mono);font-size:11.5px;padding:1px 7px;border-radius:5px;background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
-/* panels */
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px}
-.pad{padding:16px}.ph{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
-.grid{display:grid;gap:16px}.g-sum{grid-template-columns:repeat(5,minmax(0,1fr))}@media (max-width:900px){.g-sum{grid-template-columns:repeat(2,minmax(0,1fr))}}.g-svc{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
-.two{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
-@media (max-width:980px){.two{grid-template-columns:minmax(0,1fr)}}
-.stat{padding:14px 16px}.stat b{display:block;font:700 30px/1.1 var(--display);font-variant-numeric:tabular-nums}.stat span{color:var(--muted);font-size:12.5px}
-.stat.hot{border-color:var(--bad);background:linear-gradient(var(--bad-bg),var(--panel))}.stat.hot b{color:var(--bad)}
-/* needs attention */
-.need{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;padding:14px 16px;align-items:center;border-top:1px solid var(--line);cursor:pointer;background:none;border-left:0;border-right:0;border-bottom:0;text-align:left;width:100%}
-.need:first-of-type{border-top:0}.need:hover{background:var(--panel2)}
-.sev{width:4px;align-self:stretch;border-radius:4px;background:var(--warn)}.sev.high{background:var(--bad)}
-@media (max-width:640px){.need{grid-template-columns:auto minmax(0,1fr)}.need .go{grid-column:2}}
-/* service cards */
-.svc{padding:14px 16px;cursor:pointer;text-align:left;width:100%;display:block;transition:border-color .15s}.svc:hover{border-color:var(--accent)}
-.svc .r{display:flex;justify-content:space-between;align-items:center;gap:8px}.svc .nm{font:600 16px var(--display)}
-.svc dl{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:10px 0 0;font-size:13px}.svc dt{color:var(--muted)}.svc dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
-.svc svg{display:block;width:100%;height:34px;margin-top:10px}
-.st-bad{border-top:3px solid var(--bad)}.st-warn{border-top:3px solid var(--warn)}.st-ok{border-top:3px solid var(--ok)}.st-unk{border-top:3px dashed var(--unk)}
-/* tables / rows */
-.row{display:grid;grid-template-columns:90px minmax(0,1.6fr) 130px minmax(0,1fr) 150px;gap:14px;padding:13px 16px;border-top:1px solid var(--line);align-items:center;cursor:pointer;width:100%;background:none;border-left:0;border-right:0;border-bottom:0;text-align:left}
-.row:hover{background:var(--panel2)}.row.hd{cursor:default;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;border-top:0}.row.hd:hover{background:none}
-@media (max-width:860px){.row{grid-template-columns:1fr 1fr}.row.hd{display:none}}
-.chips{display:flex;gap:8px;flex-wrap:wrap}.chips button{border:1px solid var(--line2);background:var(--panel);padding:5px 12px;border-radius:99px;cursor:pointer}.chips button[aria-pressed=true]{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}
+.pill[data-tone="ok"]{color:var(--status-ok);background:var(--status-ok-surface)}
+.pill[data-tone="warn"]{color:var(--status-warn);background:var(--status-warn-surface)}.pill[data-tone="warn"]::before{border-radius:1px;transform:rotate(45deg)}
+.pill[data-tone="bad"]{color:var(--status-bad);background:var(--status-bad-surface)}.pill[data-tone="bad"]::before{border-radius:2px}
+.pill[data-tone="unknown"]{border:1px dashed var(--status-unknown)}.pill[data-tone="unknown"]::before{background:none;border:1.5px dashed currentColor}
+.pill[data-tone="accent"]{color:var(--accent);background:var(--accent-surface)}
+.pill--compact{padding:0 6px}
+.tag{font-family:var(--font-mono);font-size:11.5px;padding:1px 7px;border-radius:5px;background:var(--surface-raised);color:var(--text-muted);border:1px solid var(--border-subtle)}
+
+/* panel */
+.panel{background:var(--surface-panel);border:1px solid var(--border-subtle);border-radius:var(--radius-panel)}
+.panel__header{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border-subtle)}
+.panel__body{padding:var(--space-4)}
+.panel--decision{border-color:var(--status-warn);background:linear-gradient(var(--status-warn-surface),var(--surface-panel) 60%)}
+.panel--decision[data-state="resolved"]{border-color:var(--border-subtle);background:var(--surface-panel)}
+.stat-tile{padding:14px 16px}
+.stat-tile__value{display:block;font:700 30px/1.1 var(--font-display);font-variant-numeric:tabular-nums}
+.stat-tile__label{color:var(--text-muted);font-size:12.5px}
+.stat-tile[data-tone="bad"]{border-color:var(--status-bad);background:linear-gradient(var(--status-bad-surface),var(--surface-panel))}
+.stat-tile[data-tone="bad"] .stat-tile__value{color:var(--status-bad)}
+.stat-tile__value[data-tone="bad"]{color:var(--status-bad)}.stat-tile__value[data-tone="warn"]{color:var(--status-warn)}.stat-tile__value[data-tone="ok"]{color:var(--status-ok)}
+
+/* attention list */
+.attention-item{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;padding:14px 16px;align-items:center;border:0;border-top:1px solid var(--border-subtle);cursor:pointer;background:none;text-align:left;width:100%}
+.attention-item:first-of-type{border-top:0}.attention-item:hover{background:var(--surface-raised)}
+.attention-item__severity{width:4px;align-self:stretch;border-radius:4px;background:var(--status-warn)}
+.attention-item__severity[data-severity="high"]{background:var(--status-bad)}
+@media (max-width:640px){.attention-item{grid-template-columns:auto minmax(0,1fr)}.attention-item__action{grid-column:2}}
+
+/* service card */
+.service-card{padding:14px 16px;cursor:pointer;text-align:left;width:100%;display:block;border-top:3px solid var(--status-unknown);transition:border-color .15s}
+.service-card:hover{outline:1px solid var(--accent)}
+.service-card[data-tone="ok"]{border-top-color:var(--status-ok)}.service-card[data-tone="warn"]{border-top-color:var(--status-warn)}.service-card[data-tone="bad"]{border-top-color:var(--status-bad)}
+.service-card__name{font:600 16px var(--font-display)}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;font-size:13px}
+.facts__term{color:var(--text-muted)}.facts__value{margin:0;word-break:break-word}
+.facts--numeric .facts__value{text-align:right;font-variant-numeric:tabular-nums}
+.sparkline{display:block;width:100%;height:34px;margin-top:10px}
+.sparkline__area{opacity:.13;fill:var(--status-unknown)}.sparkline__line{fill:none;stroke:var(--status-unknown);stroke-width:1.8}.sparkline__end{fill:var(--status-unknown)}
+.sparkline[data-tone="ok"] .sparkline__area,.sparkline[data-tone="ok"] .sparkline__end{fill:var(--status-ok)}.sparkline[data-tone="ok"] .sparkline__line{stroke:var(--status-ok)}
+.sparkline[data-tone="warn"] .sparkline__area,.sparkline[data-tone="warn"] .sparkline__end{fill:var(--status-warn)}.sparkline[data-tone="warn"] .sparkline__line{stroke:var(--status-warn)}
+.sparkline[data-tone="bad"] .sparkline__area,.sparkline[data-tone="bad"] .sparkline__end{fill:var(--status-bad)}.sparkline[data-tone="bad"] .sparkline__line{stroke:var(--status-bad)}
+
+/* incident table */
+.incident-row{display:grid;grid-template-columns:90px minmax(0,1.6fr) 150px minmax(0,1fr) 150px;gap:14px;padding:13px 16px;border:0;border-top:1px solid var(--border-subtle);align-items:center;cursor:pointer;width:100%;background:none;text-align:left}
+.incident-row:hover{background:var(--surface-raised)}
+.incident-row--head{cursor:default;font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;border-top:0}.incident-row--head:hover{background:none}
+@media (max-width:860px){.incident-row{grid-template-columns:1fr 1fr}.incident-row--head{display:none}}
+.filter-group{display:flex;gap:var(--space-2);flex-wrap:wrap}
+.filter-group__option{border:1px solid var(--border-strong);background:var(--surface-panel);padding:5px 12px;border-radius:99px;cursor:pointer}
+.filter-group__option[aria-pressed="true"]{background:var(--accent-surface);border-color:var(--accent);color:var(--accent)}
+
 /* stepper */
-.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin:18px 0 6px}
-.step{position:relative;padding-top:20px;font-size:12.5px;color:var(--faint)}
-.step::before{content:"";position:absolute;top:5px;left:0;right:0;height:3px;background:var(--line2);border-radius:3px}
-.step::after{content:"";position:absolute;top:0;left:0;width:13px;height:13px;border-radius:50%;background:var(--bg);border:3px solid var(--line2)}
-.step.done{color:var(--fg)}.step.done::before{background:var(--ok)}.step.done::after{background:var(--ok);border-color:var(--ok)}
-.step.now{color:var(--fg);font-weight:600}.step.now::before{background:linear-gradient(90deg,var(--accent),var(--line2))}.step.now::after{border-color:var(--accent)}
-.step.stuck::after{border-color:var(--warn);background:var(--warn)}
-.step small{display:block;font-weight:400;color:var(--muted)}
+.stepper{display:grid;grid-template-columns:repeat(4,1fr);margin:18px 0 6px;padding:0;list-style:none}
+.stepper__step{position:relative;padding-top:20px;font-size:12.5px;color:var(--text-faint)}
+.stepper__step::before{content:"";position:absolute;top:5px;left:0;right:0;height:3px;background:var(--border-strong);border-radius:3px}
+.stepper__step::after{content:"";position:absolute;top:0;left:0;width:13px;height:13px;border-radius:50%;background:var(--surface-page);border:3px solid var(--border-strong)}
+.stepper__step[data-state="done"]{color:var(--text-primary)}.stepper__step[data-state="done"]::before{background:var(--status-ok)}.stepper__step[data-state="done"]::after{background:var(--status-ok);border-color:var(--status-ok)}
+.stepper__step[data-state="current"],.stepper__step[data-state="blocked"]{color:var(--text-primary);font-weight:600}
+.stepper__step[data-state="current"]::before,.stepper__step[data-state="blocked"]::before{background:linear-gradient(90deg,var(--accent),var(--border-strong))}
+.stepper__step[data-state="current"]::after{border-color:var(--accent)}
+.stepper__step[data-state="blocked"]::after{border-color:var(--status-warn);background:var(--status-warn)}
+.stepper__note{display:block;font-weight:400;color:var(--text-muted)}
+
 /* tabs */
-.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin:22px 0 18px;overflow-x:auto}
-.tabs button{background:none;border:0;border-bottom:2px solid transparent;padding:9px 14px;color:var(--muted);cursor:pointer;white-space:nowrap;font-weight:500}
-.tabs button[aria-selected=true]{color:var(--fg);border-bottom-color:var(--accent)}
-/* rail & decision */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border-subtle);margin:22px 0 18px;overflow-x:auto}
+.tabs__tab{background:none;border:0;border-bottom:2px solid transparent;padding:9px 14px;color:var(--text-muted);cursor:pointer;white-space:nowrap;font-weight:500}
+.tabs__tab[aria-selected="true"]{color:var(--text-primary);border-bottom-color:var(--accent)}
+
+/* controls */
+.button{border:1px solid var(--border-strong);background:var(--surface-raised);padding:8px 14px;border-radius:var(--radius-control);cursor:pointer;font-weight:600}
+.button--primary{background:var(--accent);border-color:var(--accent);color:var(--accent-contrast)}
+.button--danger{color:var(--status-bad);border-color:var(--status-bad);background:none}
+.button:disabled{opacity:.45;cursor:not-allowed}
 .rail{position:sticky;top:calc(70px + env(safe-area-inset-top,0px));display:grid;gap:14px}
-.decide{border:1px solid var(--warn);background:linear-gradient(var(--warn-bg),var(--panel) 60%)}
-.decide.ok{border-color:var(--line)}.decide.ok{background:var(--panel)}
-.btn{border:1px solid var(--line2);background:var(--panel2);padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600}
-.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}.btn.bad{color:var(--bad);border-color:var(--bad);background:none}
-.btn:disabled{opacity:.45;cursor:not-allowed}.btns{display:flex;gap:8px;flex-wrap:wrap}
-.lock{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--muted);background:var(--panel2);padding:8px 10px;border-radius:8px;border:1px dashed var(--line2)}
-textarea{width:100%;background:var(--bg);border:1px solid var(--line2);border-radius:8px;padding:8px 10px;resize:vertical;min-height:62px}
-.kv{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:13px;margin:0}.kv dt{color:var(--muted)}.kv dd{margin:0;word-break:break-all}
+.lock-hint{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--text-muted);background:var(--surface-raised);padding:8px 10px;border-radius:var(--radius-control);border:1px dashed var(--border-strong)}
+.textarea{width:100%;background:var(--surface-page);border:1px solid var(--border-strong);border-radius:var(--radius-control);padding:8px 10px;resize:vertical;min-height:62px}
+.notice{border-left:3px solid var(--accent);background:var(--accent-surface);padding:10px 12px;border-radius:0 var(--radius-control) var(--radius-control) 0;font-size:13px}
+.notice--warn{border-color:var(--status-warn);background:var(--status-warn-surface)}
+.command-line{font-family:var(--font-mono);font-size:12.5px;background:var(--surface-page);border:1px solid var(--border-subtle);padding:10px 12px;border-radius:var(--radius-control)}
+
 /* timeline */
-.tl{list-style:none;margin:0;padding:0;position:relative}.tl::before{content:"";position:absolute;left:79px;top:6px;bottom:6px;width:2px;background:var(--line)}
-.tl li{display:grid;grid-template-columns:70px 20px minmax(0,1fr);gap:8px;padding:7px 0}
-.tl time{color:var(--muted);font-family:var(--mono);font-size:12px;text-align:right;padding-top:2px}
-.tl .n{width:11px;height:11px;border-radius:50%;margin:6px 0 0 5px;background:var(--line2);border:2px solid var(--bg2);position:relative}
-.tl .n.alert{background:var(--bad)}.tl .n.diag{background:var(--accent)}.tl .n.good{background:var(--ok)}.tl .n.act{background:var(--warn)}
-.tl small{color:var(--muted);display:block}
-/* diagnosis */
-.hyp{padding:16px}.bar{height:8px;border-radius:6px;background:var(--panel2);overflow:hidden;margin:6px 0 2px}.bar i{display:block;height:100%;background:var(--accent)}
-.claims{list-style:none;padding:0;margin:8px 0;display:grid;gap:7px}.claims li{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start}
-.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-top:14px}
-.note{border-left:3px solid var(--accent);background:var(--accent-bg);padding:10px 12px;border-radius:0 8px 8px 0;font-size:13px}
-.note.w{border-color:var(--warn);background:var(--warn-bg)}
-.logs{background:var(--bg);border:1px solid var(--line);border-radius:8px;font-family:var(--mono);font-size:12px;max-height:230px;overflow:auto;padding:6px 0}.logs div{padding:1px 12px;white-space:pre-wrap;overflow-wrap:anywhere}.logs .e{color:var(--bad)}
-.evrow{display:grid;grid-template-columns:70px 100px minmax(0,1fr) auto;gap:12px;padding:10px 16px;border-top:1px solid var(--line);align-items:start}
-@media (max-width:700px){.evrow{grid-template-columns:60px 1fr}}
-.evrow.f{background:var(--accent-bg)}
+.timeline{list-style:none;margin:0;padding:0;position:relative}.timeline::before{content:"";position:absolute;left:79px;top:6px;bottom:6px;width:2px;background:var(--border-subtle)}
+.timeline__item{display:grid;grid-template-columns:70px 20px minmax(0,1fr);gap:8px;padding:7px 0}
+.timeline__time{color:var(--text-muted);font-family:var(--font-mono);font-size:12px;text-align:right;padding-top:2px}
+.timeline__marker{width:11px;height:11px;border-radius:50%;margin:6px 0 0 5px;background:var(--border-strong);border:2px solid var(--surface-chrome);position:relative}
+.timeline__marker[data-kind="alert"]{background:var(--status-bad)}.timeline__marker[data-kind="diagnosis"]{background:var(--accent)}
+.timeline__marker[data-kind="resolved"]{background:var(--status-ok)}.timeline__marker[data-kind="action"]{background:var(--status-warn)}
+
+/* diagnosis and evidence */
+.ranking-bar{appearance:none;-webkit-appearance:none;width:100%;height:8px;border:0;border-radius:6px;background:var(--surface-raised);overflow:hidden}
+.ranking-bar::-webkit-progress-bar{background:var(--surface-raised)}.ranking-bar::-webkit-progress-value{background:var(--accent);border-radius:6px}.ranking-bar::-moz-progress-bar{background:var(--accent)}
+.claim-list{list-style:none;padding:0;display:grid;gap:7px}
+.claim-list__item{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start}
+.evidence-row{display:grid;grid-template-columns:70px 100px minmax(0,1fr) auto;gap:12px;padding:10px 16px;border-top:1px solid var(--border-subtle);align-items:start}
+.evidence-row[data-key="true"]{background:var(--accent-surface)}
+@media (max-width:700px){.evidence-row{grid-template-columns:60px 1fr}}
+.log-view{background:var(--surface-page);border:1px solid var(--border-subtle);border-radius:var(--radius-control);font-family:var(--font-mono);font-size:12px;max-height:230px;overflow:auto;padding:6px 0}
+.log-view__line{padding:1px 12px;white-space:pre-wrap;overflow-wrap:anywhere}.log-view__line[data-level="error"]{color:var(--status-bad)}
+
 /* topology */
-.topo{width:100%;height:auto;display:block}.topo text{fill:var(--fg);font:600 13px var(--display)}.topo .s{fill:var(--muted);font:11px var(--body)}
-.topo .e{stroke:var(--line2);stroke-width:1.6;fill:none}.topo .e.bad{stroke:var(--bad);stroke-dasharray:5 4}
-.topo .nd rect{fill:var(--panel);stroke-width:2;cursor:pointer}.topo .nd:hover rect{fill:var(--panel2)}
-.drawer{padding:16px;display:grid;gap:12px}
+.topology{width:100%;height:auto;display:block}
+.topology__label{fill:var(--text-primary);font:600 13px var(--font-display)}.topology__sublabel{fill:var(--text-muted);font:11px var(--font-body)}
+.topology__edge{stroke:var(--border-strong);stroke-width:1.6;fill:none}.topology__edge--failing{stroke:var(--status-bad);stroke-dasharray:5 4}
+.topology__arrow{fill:var(--text-faint)}
+.topology__node{cursor:pointer}.topology__node rect{fill:var(--surface-panel);stroke:var(--status-unknown);stroke-width:2}.topology__node:hover rect{fill:var(--surface-raised)}
+.topology__node[data-tone="ok"] rect{stroke:var(--status-ok)}.topology__node[data-tone="warn"] rect{stroke:var(--status-warn)}.topology__node[data-tone="bad"] rect{stroke:var(--status-bad)}
+.topology__node[data-selected="true"] rect{stroke-width:3.5}
+
 /* matrix */
-.mx{width:100%;border-collapse:collapse}.mx th,.mx td{padding:10px 14px;border-top:1px solid var(--line);text-align:center}.mx th:first-child,.mx td:first-child{text-align:left}
-.mx thead th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;border-top:0}
-.mx tr.me th,.mx td.me{background:var(--accent-bg)}
-.yes{color:var(--ok);font-weight:700}.no{color:var(--faint)}
-.scroll{overflow-x:auto}
-.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;box-shadow:var(--shadow);z-index:50;font-weight:500;max-width:92vw}
-.proto{font-size:12px;color:var(--muted);padding:10px 0 0}
-.chain{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.matrix{width:100%;border-collapse:collapse}.matrix th,.matrix td{padding:10px 14px;border-top:1px solid var(--border-subtle);text-align:center}.matrix th:first-child,.matrix td:first-child{text-align:left}
+.matrix thead th{font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;border-top:0}
+.matrix [data-current="true"]{background:var(--accent-surface)}
+.matrix__yes{color:var(--status-ok);font-weight:700}.matrix__no{color:var(--text-faint)}
+.matrix--wide{min-width:640px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--text-primary);color:var(--surface-page);padding:10px 16px;border-radius:10px;box-shadow:var(--shadow-popover);z-index:50;font-weight:500;max-width:92vw}
+.prototype-note{font-size:12px;color:var(--text-muted);padding-top:10px}
+.list-plain{padding-left:18px}
 </style>
 
 <div id="app"></div>
-<div id="toast" class="toast" hidden></div>
+<div id="toast" class="toast" role="status" hidden></div>
 
 <script>
-/* ---------- sample data (modelled on the real sandbox run; marked as sample in the UI) ---------- */
-const SVC=[
- {n:'api',kind:'app',st:'bad',av:'38%',p95:'4.2 s',tp:'3 rps',dep:['redis','app-db'],inc:'INC-0003',sp:[99,99,98,99,97,80,52,40,38,38,37,38]},
- {n:'worker',kind:'queue_worker',st:'bad',av:'0%',p95:'n/a',tp:'0 jobs/s',dep:['redis','app-db'],inc:'INC-0002',sp:[100,100,100,100,100,60,0,0,0,0,0,0]},
- {n:'app-db',kind:'database',st:'warn',av:'100%',p95:'0.3 ms probe',tp:'100/100 conn',dep:[],inc:'INC-0003',sp:[4,6,5,5,30,70,100,100,100,100,100,100]},
- {n:'redis',kind:'cache',st:'ok',av:'100%',p95:'0.9 ms',tp:'queue 0',dep:[],inc:null,sp:[0,0,1,0,0,0,0,0,1,0,0,0]},
- {n:'loadgen',kind:'load_generator',st:'ok',av:'100%',p95:'—',tp:'10 rps',dep:['api'],inc:null,sp:[10,10,10,10,10,10,10,10,10,10,10,10]}];
-const ST={ok:['HEALTHY','p-ok'],warn:['DEGRADED','p-warn'],bad:['UNHEALTHY','p-bad'],unk:['UNKNOWN','p-unk']};
-const INC={
-'INC-0003':{id:'INC-0003',title:'app-db is out of connections',state:'diagnosed',step:2,sev:'high',opened:'19:10:51Z',age:'4 m',svcs:['api','worker','app-db'],
- cause:'app_db_connection_exhaustion',conf:.44,basis:['evidence coverage 0.73 (8.0 / 11.0 signal weight)','1 independent signal type (metric), factor 0.60','contradiction share 0.00'],
- sum:'The database process is healthy but has no free connections, so api and worker cannot connect.',
- claims:[['observation','app-db refused the monitoring connection with "too many clients"','EV-034'],['inference','Dependents cannot reach it: api, worker','EV-015, EV-024'],['observation','app-db answers its availability probe, so it is not down','EV-028'],['inference','More than one dependent is affected','EV-015']],
- contra:[],unk:['Connection counts and the leaking client are unavailable while the probe is refused (any count shown is stale).','Change feed unavailable: deploys and container events are not ruled out.'],
- alts:[['app_db_unavailable','0.05','refuted: it still answers its probe'],['redis_unavailable','rejected','redis answers its probe']],
- action:{id:'escalate',why:'No safe catalogue action for connection exhaustion. Restarting a database is never allowed.'},plan:null,
- tl:[['19:10:51','alert','api and worker lose app-db (cd_dependency_up = 0)'],['19:10:56','alert','worker logs: 100 error lines in 5 s'],['19:14:41','alert','Incident opened (rule dependency_down)'],['19:14:51','diag','Evidence collected: 12 sources, 1 failed (change feed)'],['19:14:51','diag','Diagnosis: app_db_connection_exhaustion, ranking 0.44'],['19:14:51','act','Recommended action: escalate to a human']],
- ev:[['EV-034','metric','app-db db_refused: 0 → 1 over 61 samples',1],['EV-015','metric','api dependency_up:app-db: 1 → 0'],['EV-024','metric','worker dependency_up:app-db: 1 → 0'],['EV-028','metric','app-db cd_service_up = 1'],['EV-025','logs','worker: 100 lines, 100 error-level (text is untrusted)'],['EV-035','change','Change feed unavailable; deploys not observed']],
- logs:['{"level":"error","service":"worker","msg":"job failed","error":"OperationalError"}','{"level":"error","service":"worker","msg":"job failed","error":"OperationalError"}','{"level":"error","service":"api","msg":"redis connection failed","error":"Timeout connecting to server"}'],
- verify:null},
-'INC-0002':{id:'INC-0002',title:'worker stopped processing jobs',state:'remediating',step:2,sev:'medium',opened:'19:02:10Z',age:'12 m',svcs:['worker'],
- cause:'worker_crash',conf:.65,basis:['evidence coverage 0.80','2 independent signal types (metric, log)','contradiction share 0.00'],
- sum:'The worker process is down; its queue series disappeared at 19:02, which is how a dead worker looks here.',
- claims:[['observation','cd_service_up for worker is 0 since 19:02:08','EV-041'],['observation','The queue length series is absent, not rising (the worker exports it)','EV-043'],['observation','Container exited with code 137','EV-044']],contra:[],
- unk:['Why the process exited is not visible from telemetry.'],alts:[['redis_unavailable','rejected','redis answers its probe']],
- action:{id:'restart_container',why:'Restarting a stateless worker is low-impact and reversible.'},
- plan:{hash:'sha256:7b1e…c40a',risk:'medium',target:'cd-worker',cmd:'docker restart cd-worker',expires:'4 min',layer1:'pass (I-01 … I-08)',layer2:'allow with approval'},
- tl:[['19:02:08','alert','worker down (cd_service_up = 0)'],['19:02:10','alert','Incident opened'],['19:02:40','diag','Diagnosis: worker_crash, ranking 0.65'],['19:02:41','act','Plan proposed: restart cd-worker (medium risk)'],['19:02:41','act','Policy: allow with approval']],
- ev:[['EV-041','metric','worker cd_service_up: 1 → 0',1],['EV-043','metric','worker queue length series absent'],['EV-044','change','container cd-worker exited (137)']],logs:['{"level":"info","service":"worker","msg":"worker starting"}'],verify:null},
-'INC-0001':{id:'INC-0001',title:'Redis outage',state:'closed',step:4,sev:'high',opened:'18:21:03Z',age:'closed',svcs:['redis','api','worker'],
- cause:'redis_unavailable',conf:.82,basis:['evidence coverage 0.91','3 independent signal types','contradiction share 0.00'],
- sum:'Redis was unreachable; api and worker failed on every cache and queue call. Restarting it restored service.',
- claims:[['observation','redis cd_service_up = 0','EV-005'],['inference','api error ratio 0.97 after redis went down','EV-009']],contra:[],unk:[],alts:[],
- action:{id:'restart_container',why:'Approved by an approver at 18:24.'},plan:{hash:'sha256:a91f…02d8',risk:'medium',target:'cd-redis',cmd:'docker restart cd-redis',expires:'—',layer1:'pass',layer2:'allow with approval',done:'Approved by m.rao at 18:24:12Z'},
- tl:[['18:21:03','alert','redis down'],['18:21:30','diag','Diagnosis: redis_unavailable, 0.82'],['18:24:12','act','Plan approved by m.rao'],['18:24:20','act','cd-redis restarted'],['18:25:30','good','Verification passed: 7 of 7 checks']],
- ev:[['EV-005','metric','redis cd_service_up: 1 → 0',1],['EV-009','metric','api error_ratio: 0.01 → 0.97']],logs:[],
- verify:{verdict:'recovered',checks:[['Service answers its probe',1],['Error ratio below 0.02',1],['p95 below 0.5 s',1],['Queue drains',1],['Independent probe URL ok',1],['No relapse in 60 s',1],['Dependents healthy',1]]}}};
-const AUDIT=[['19:14:51','system','diagnosis.created','INC-0003','a3f9…71c2'],['19:14:41','system','incident.opened','INC-0003','5be0…9a14'],['19:02:41','system','policy.decision (allow_with_approval)','INC-0002','c8d1…0e3b'],['19:02:10','system','incident.opened','INC-0002','1f77…aa90'],['18:25:30','system','verification.recorded (recovered)','INC-0001','90ce…5d21'],['18:24:20','actuator','execution.completed','INC-0001','be42…c7f0'],['18:24:12','m.rao','plan.approved','INC-0001','6d03…81ab']];
-const ROLES={viewer:{label:'Viewer',desc:'Read-only: status, incidents, diagnosis summaries.',p:['view']},
- operator:{label:'Operator',desc:'Viewer plus raw logs and evidence, and re-running a diagnosis.',p:['view','logs','diagnose']},
- approver:{label:'Approver',desc:'Operator plus approving or rejecting remediation plans.',p:['view','logs','diagnose','decide']},
- admin:{label:'Admin',desc:'Everything, including the audit log and role assignment.',p:['view','logs','diagnose','decide','audit','access']}};
-const PERMS=[['view','View status, incidents, diagnosis'],['logs','View raw evidence and logs'],['diagnose','Re-run a diagnosis'],['decide','Approve or reject plans'],['audit','View the audit log'],['access','Manage roles and sessions']];
+/* Naming: camelCase code; data fields are snake_case exactly as the API contract; enum values are lower snake_case,
+   except health_state (HEALTHY | DEGRADED | UNHEALTHY | UNKNOWN), which is frozen upper-case. */
 
-/* ---------- state ---------- */
-const S={view:'overview',inc:'INC-0003',tab:'summary',role:'operator',env:'rbac',filter:'all',menu:false,theme:null,node:'app-db',confirm:null,decided:{},rediag:false};
-const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const eff=()=>S.env==='open'?'admin':S.role;
-const can=p=>ROLES[eff()].p.includes(p);
-const pill=(st)=>`<span class="pill ${ST[st][1]}">${ST[st][0]}</span>`;
-const stPill=s=>({closed:'<span class="pill p-ok">closed · recovered</span>',remediating:'<span class="pill p-warn">awaiting approval</span>',diagnosed:'<span class="pill p-bad">needs a human</span>'}[s]||s);
-function toast(t){const e=document.getElementById('toast');e.textContent=t;e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,3200)}
-function spark(a,st){const w=240,h=34,mx=Math.max(...a,1),mn=Math.min(...a),r=mx-mn||1;const pts=a.map((v,i)=>[i*(w/(a.length-1)),h-3-((v-mn)/r)*(h-8)]);const d=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');const c={ok:'var(--ok)',warn:'var(--warn)',bad:'var(--bad)'}[st]||'var(--unk)';const last=pts[pts.length-1];
- return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="trend"><path d="${d} L${w} ${h} L0 ${h} Z" fill="${c}" opacity=".13"/><path d="${d}" fill="none" stroke="${c}" stroke-width="1.8"/><circle cx="${last[0]-2}" cy="${last[1]}" r="3" fill="${c}"/></svg>`}
-const gate=(p,why)=>can(p)?'':`<div class="lock"><span aria-hidden="true">🔒</span><span>${why} Your role: <b>${ROLES[eff()].label}</b>.</span></div>`;
+/* ---------- sample data (modelled on the real sandbox run; labelled as sample in the UI) ---------- */
+const services = [
+  {name:'api', kind:'app', health_state:'UNHEALTHY', availability:'38%', latency:'4.2 s', load:'3 rps', depends_on:['redis','app-db'], incident_id:'INC-0003', trend:[99,99,98,99,97,80,52,40,38,38,37,38]},
+  {name:'worker', kind:'queue_worker', health_state:'UNHEALTHY', availability:'0%', latency:'n/a', load:'0 jobs/s', depends_on:['redis','app-db'], incident_id:'INC-0002', trend:[100,100,100,100,100,60,0,0,0,0,0,0]},
+  {name:'app-db', kind:'database', health_state:'DEGRADED', availability:'100%', latency:'0.3 ms probe', load:'100/100 conn', depends_on:[], incident_id:'INC-0003', trend:[4,6,5,5,30,70,100,100,100,100,100,100]},
+  {name:'redis', kind:'cache', health_state:'HEALTHY', availability:'100%', latency:'0.9 ms', load:'queue 0', depends_on:[], incident_id:null, trend:[0,0,1,0,0,0,0,0,1,0,0,0]},
+  {name:'loadgen', kind:'load_generator', health_state:'HEALTHY', availability:'100%', latency:'n/a', load:'10 rps', depends_on:['api'], incident_id:null, trend:[10,10,10,10,10,10,10,10,10,10,10,10]},
+];
+const incidents = {
+  'INC-0003': {incident_id:'INC-0003', title:'app-db is out of connections', state:'diagnosed', severity:'high', opened_at:'19:10:51Z', age:'4 m', progress:2, services:['api','worker','app-db'],
+    summary:'The database process is healthy but has no free connections, so api and worker cannot connect.',
+    top_cause:{cause_id:'app_db_connection_exhaustion', ranking:.44, basis:['evidence coverage 0.73 (8.0 / 11.0 signal weight)','1 independent signal type (metric), factor 0.60','contradiction share 0.00'],
+      claims:[{claim_type:'observation',text:'app-db refused the monitoring connection with "too many clients"',evidence_ids:'EV-034'},{claim_type:'inference',text:'Dependents cannot reach it: api, worker',evidence_ids:'EV-015, EV-024'},{claim_type:'observation',text:'app-db answers its availability probe, so it is not down',evidence_ids:'EV-028'},{claim_type:'inference',text:'More than one dependent is affected',evidence_ids:'EV-015'}],
+      contradicting:[], unknowns:['Connection counts and the leaking client are unavailable while the probe is refused (any count shown is stale).','Change feed unavailable: deploys and container events are not ruled out.'],
+      alternatives:[{cause_id:'app_db_unavailable',ranking:'0.05',note:'refuted: it still answers its probe'},{cause_id:'redis_unavailable',ranking:'rejected',note:'redis answers its probe'}]},
+    recommended_action:{action_id:'escalate', reason:'No safe catalogue action for connection exhaustion. Restarting a database is never allowed.'}, plan:null,
+    timeline:[{time:'19:10:51',kind:'alert',text:'api and worker lose app-db (cd_dependency_up = 0)'},{time:'19:10:56',kind:'alert',text:'worker logs: 100 error lines in 5 s'},{time:'19:14:41',kind:'alert',text:'Incident opened (rule dependency_down)'},{time:'19:14:51',kind:'diagnosis',text:'Evidence collected: 12 sources, 1 failed (change feed)'},{time:'19:14:51',kind:'diagnosis',text:'Diagnosis: app_db_connection_exhaustion, ranking 0.44'},{time:'19:14:51',kind:'action',text:'Recommended action: escalate to a human'}],
+    evidence:[{evidence_id:'EV-034',source:'metric',summary:'app-db db_refused: 0 → 1 over 61 samples',key:true},{evidence_id:'EV-015',source:'metric',summary:'api dependency_up:app-db: 1 → 0',key:false},{evidence_id:'EV-024',source:'metric',summary:'worker dependency_up:app-db: 1 → 0',key:false},{evidence_id:'EV-028',source:'metric',summary:'app-db cd_service_up = 1',key:false},{evidence_id:'EV-025',source:'logs',summary:'worker: 100 lines, 100 error-level (text is untrusted)',key:false},{evidence_id:'EV-035',source:'change',summary:'Change feed unavailable; deploys not observed',key:false}],
+    log_lines:[{level:'error',text:'{"level":"error","service":"worker","msg":"job failed","error":"OperationalError"}'},{level:'error',text:'{"level":"error","service":"worker","msg":"job failed","error":"OperationalError"}'},{level:'error',text:'{"level":"error","service":"api","msg":"redis connection failed","error":"Timeout connecting to server"}'}],
+    verification:null},
+  'INC-0002': {incident_id:'INC-0002', title:'worker stopped processing jobs', state:'remediating', severity:'medium', opened_at:'19:02:10Z', age:'12 m', progress:2, services:['worker'],
+    summary:'The worker process is down; its queue series disappeared at 19:02, which is how a dead worker looks here.',
+    top_cause:{cause_id:'worker_crash', ranking:.65, basis:['evidence coverage 0.80','2 independent signal types (metric, log)','contradiction share 0.00'],
+      claims:[{claim_type:'observation',text:'cd_service_up for worker is 0 since 19:02:08',evidence_ids:'EV-041'},{claim_type:'observation',text:'The queue length series is absent, not rising (the worker exports it)',evidence_ids:'EV-043'},{claim_type:'observation',text:'Container exited with code 137',evidence_ids:'EV-044'}],
+      contradicting:[], unknowns:['Why the process exited is not visible from telemetry.'], alternatives:[{cause_id:'redis_unavailable',ranking:'rejected',note:'redis answers its probe'}]},
+    recommended_action:{action_id:'restart_service', reason:'Restarting a stateless worker is low-impact and reversible.'},
+    plan:{plan_hash:'sha256:7b1e…c40a', risk:'medium', target:'cd-worker', command:'docker restart cd-worker', expires_in:'4 min', layer1:'pass (I-01 … I-08)', layer2:'allow with approval', resolution:null},
+    timeline:[{time:'19:02:08',kind:'alert',text:'worker down (cd_service_up = 0)'},{time:'19:02:10',kind:'alert',text:'Incident opened'},{time:'19:02:40',kind:'diagnosis',text:'Diagnosis: worker_crash, ranking 0.65'},{time:'19:02:41',kind:'action',text:'Plan proposed: restart cd-worker (medium risk)'},{time:'19:02:41',kind:'action',text:'Policy: allow with approval'}],
+    evidence:[{evidence_id:'EV-041',source:'metric',summary:'worker cd_service_up: 1 → 0',key:true},{evidence_id:'EV-043',source:'metric',summary:'worker queue length series absent',key:false},{evidence_id:'EV-044',source:'change',summary:'container cd-worker exited (137)',key:false}],
+    log_lines:[{level:'info',text:'{"level":"info","service":"worker","msg":"worker starting"}'}], verification:null},
+  'INC-0001': {incident_id:'INC-0001', title:'Redis outage', state:'closed', severity:'high', opened_at:'18:21:03Z', age:'closed', progress:4, services:['redis','api','worker'],
+    summary:'Redis was unreachable; api and worker failed on every cache and queue call. Restarting it restored service.',
+    top_cause:{cause_id:'redis_unavailable', ranking:.82, basis:['evidence coverage 0.91','3 independent signal types','contradiction share 0.00'],
+      claims:[{claim_type:'observation',text:'redis cd_service_up = 0',evidence_ids:'EV-005'},{claim_type:'inference',text:'api error ratio 0.97 after redis went down',evidence_ids:'EV-009'}], contradicting:[], unknowns:[], alternatives:[]},
+    recommended_action:{action_id:'restart_service', reason:'Approved by an approver at 18:24.'},
+    plan:{plan_hash:'sha256:a91f…02d8', risk:'medium', target:'cd-redis', command:'docker restart cd-redis', expires_in:'—', layer1:'pass', layer2:'allow with approval', resolution:'Approved by m.rao at 18:24:12Z'},
+    timeline:[{time:'18:21:03',kind:'alert',text:'redis down'},{time:'18:21:30',kind:'diagnosis',text:'Diagnosis: redis_unavailable, 0.82'},{time:'18:24:12',kind:'action',text:'Plan approved by m.rao'},{time:'18:24:20',kind:'action',text:'cd-redis restarted'},{time:'18:25:30',kind:'resolved',text:'Verification passed: 7 of 7 checks'}],
+    evidence:[{evidence_id:'EV-005',source:'metric',summary:'redis cd_service_up: 1 → 0',key:true},{evidence_id:'EV-009',source:'metric',summary:'api error_ratio: 0.01 → 0.97',key:false}], log_lines:[],
+    verification:{verdict:'recovered', checks:[{name:'Service answers its probe',passed:true},{name:'Error ratio below 0.02',passed:true},{name:'p95 below 0.5 s',passed:true},{name:'Queue drains',passed:true},{name:'Independent probe URL ok',passed:true},{name:'No relapse in 60 s',passed:true},{name:'Dependents healthy',passed:true}]}},
+};
+const auditEvents = [
+  {time:'19:14:51',actor:'system',event_type:'diagnosis.created',incident_id:'INC-0003',hash:'a3f9…71c2'},{time:'19:14:41',actor:'system',event_type:'incident.opened',incident_id:'INC-0003',hash:'5be0…9a14'},
+  {time:'19:02:41',actor:'system',event_type:'policy.decision (allow_with_approval)',incident_id:'INC-0002',hash:'c8d1…0e3b'},{time:'19:02:10',actor:'system',event_type:'incident.opened',incident_id:'INC-0002',hash:'1f77…aa90'},
+  {time:'18:25:30',actor:'system',event_type:'verification.recorded (recovered)',incident_id:'INC-0001',hash:'90ce…5d21'},{time:'18:24:20',actor:'actuator',event_type:'execution.completed',incident_id:'INC-0001',hash:'be42…c7f0'},
+  {time:'18:24:12',actor:'m.rao',event_type:'plan.approved',incident_id:'INC-0001',hash:'6d03…81ab'},
+];
+const roles = {
+  viewer:{label:'Viewer', description:'Read-only: status, incidents, diagnosis summaries.', permissions:['view_status']},
+  operator:{label:'Operator', description:'Viewer plus raw logs and evidence, and re-running a diagnosis.', permissions:['view_status','view_logs','rerun_diagnosis']},
+  approver:{label:'Approver', description:'Operator plus approving or rejecting remediation plans.', permissions:['view_status','view_logs','rerun_diagnosis','decide_plans']},
+  admin:{label:'Admin', description:'Everything, including the audit log and role assignment.', permissions:['view_status','view_logs','rerun_diagnosis','decide_plans','view_audit','manage_access']},
+};
+const permissionLabels = [['view_status','View status, incidents, diagnosis'],['view_logs','View raw evidence and logs'],['rerun_diagnosis','Re-run a diagnosis'],['decide_plans','Approve or reject plans'],['view_audit','View the audit log'],['manage_access','Manage roles and sessions']];
+const healthTone = {HEALTHY:'ok', DEGRADED:'warn', UNHEALTHY:'bad', UNKNOWN:'unknown'};
+const incidentTabs = ['summary','timeline','evidence','diagnosis','remediation','verification','report'];
+const stepLabels = ['Detected','Diagnosed','Acting','Verified'];
+
+/* ---------- ui state ---------- */
+const ui = {view:'overview', incidentId:'INC-0003', tab:'summary', roleId:'operator', envMode:'rbac', filter:'all', menuOpen:false, nodeName:'app-db', pendingDecision:null, decisions:{}, rediagRunning:false};
+const effectiveRoleId = () => ui.envMode === 'open' ? 'admin' : ui.roleId;
+const can = permission => roles[effectiveRoleId()].permissions.includes(permission);
+const escapeHtml = value => String(value).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- small renderers ---------- */
+const iconPaths = {
+  lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  contrast:'<circle cx="12" cy="12" r="9"/><path d="M12 3v18" /><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/>',
+  chevron:'<path d="M6 9l6 6 6-6"/>',
+  back:'<path d="M15 6l-6 6 6 6"/>',
+};
+const icon = name => `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${iconPaths[name]}</svg>`;
+const pill = (tone, text, extraClass = '') => `<span class="pill ${extraClass}" data-tone="${tone}">${text}</span>`;
+const healthPill = healthState => pill(healthTone[healthState], healthState);
+function incidentStatePill(state) {
+  const map = {closed:['ok','closed · recovered'], remediating:['warn','awaiting approval'], diagnosed:['bad','needs a human']};
+  const [tone, text] = map[state] || ['unknown', state];
+  return pill(tone, text);
+}
+function showToast(text) {
+  const element = document.getElementById('toast');
+  element.textContent = text; element.hidden = false;
+  clearTimeout(showToast.timer); showToast.timer = setTimeout(() => { element.hidden = true; }, 3200);
+}
+function renderSparkline(trend, tone) {
+  const width = 240, height = 34, max = Math.max(...trend, 1), min = Math.min(...trend), span = max - min || 1;
+  const points = trend.map((v, i) => [i * (width / (trend.length - 1)), height - 3 - ((v - min) / span) * (height - 8)]);
+  const path = points.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+  const last = points[points.length - 1];
+  return `<svg class="sparkline" data-tone="${tone}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="trend"><path class="sparkline__area" d="${path} L${width} ${height} L0 ${height} Z"/><path class="sparkline__line" d="${path}"/><circle class="sparkline__end" cx="${last[0] - 2}" cy="${last[1]}" r="3"/></svg>`;
+}
+const lockHint = (permission, reason) => can(permission) ? '' : `<div class="lock-hint">${icon('lock')}<span>${reason} Your role: <b>${roles[effectiveRoleId()].label}</b>.</span></div>`;
+const factsList = (rows, numeric = false) => `<dl class="facts ${numeric ? 'facts--numeric' : ''}">${rows.map(([term, value]) => `<dt class="facts__term">${term}</dt><dd class="facts__value">${value}</dd>`).join('')}</dl>`;
 
 /* ---------- views ---------- */
-function vOverview(){
- const open=Object.values(INC).filter(i=>i.state!=='closed');const need=open.filter(i=>i.state==='remediating'||i.sev==='high');
- const cnt=k=>SVC.filter(s=>s.st===k).length;
- return `<div class="head"><div><h1>Overview</h1><p>What is broken, what Cloud Doctor is doing about it, and what needs you.</p></div><span class="tag">sample data from the sandbox run</span></div>
- <div class="grid g-sum" style="margin-bottom:20px">
-  <div class="panel stat ${open.length?'hot':''}"><b>${open.length}</b><span>open incidents</span></div>
-  <div class="panel stat"><b style="color:var(--bad)">${cnt('bad')}</b><span>services unhealthy</span></div>
-  <div class="panel stat"><b style="color:var(--warn)">${cnt('warn')}</b><span>degraded</span></div>
-  <div class="panel stat"><b style="color:var(--ok)">${cnt('ok')}</b><span>healthy</span></div>
-  <div class="panel stat"><b>1</b><span>plan waiting for approval</span></div></div>
- <div class="two" style="margin-bottom:24px"><section class="panel"><div class="ph"><h2>Needs attention</h2><span class="muted">${need.length} items, newest first</span></div>
-  ${need.map(i=>`<button class="need" data-inc="${i.id}"><span class="sev ${i.sev==='high'?'high':''}"></span><span><b>${esc(i.title)}</b><br><span class="muted">${i.id} · ${i.svcs.join(', ')} · opened ${i.age} ago · ${esc(i.cause)}</span></span><span class="go">${i.state==='remediating'?(can('decide')?'<span class="pill p-warn">Review &amp; approve</span>':'<span class="pill p-unk">Awaiting an approver</span>'):'<span class="pill p-bad">Decide next step</span>'}</span></button>`).join('')||'<div class="pad muted">Nothing needs you.</div>'}</section>
-  <aside class="panel pad" style="display:grid;gap:10px"><h2>Automation</h2><div class="row2"><span class="pill p-ok">Detecting</span> <span class="pill p-acc">Recommend-only</span></div>
-  <p class="muted" style="margin:0">Cloud Doctor proposes actions. Policy checks every plan, and anything of medium risk or above waits for an approver.</p>
-  <dl class="kv"><dt>Policy</dt><dd>Layer 1 active · Layer 2 off</dd><dt>Actuator</dt><dd>not connected</dd><dt>LLM</dt><dd>off (deterministic)</dd></dl></aside></div>
- <div class="head" style="margin-bottom:10px"><h2>Services</h2><span class="muted">Select a service to see dependencies and incidents</span></div>
- <div class="grid g-svc">${SVC.map(s=>`<button class="panel svc st-${s.st}" data-svc="${s.n}"><div class="r"><span class="nm">${s.n}</span>${pill(s.st)}</div><div class="muted">${s.kind.replace('_',' ')}</div>
-  <dl><dt>Availability</dt><dd>${s.av}</dd><dt>Latency</dt><dd>${s.p95}</dd><dt>Load</dt><dd>${s.tp}</dd>${s.inc?`<dt>Incident</dt><dd><a href="#" data-inc="${s.inc}">${s.inc}</a></dd>`:''}</dl>${spark(s.sp,s.st)}</button>`).join('')}</div>`}
+function renderOverview() {
+  const openIncidents = Object.values(incidents).filter(i => i.state !== 'closed');
+  const needsAttention = openIncidents.filter(i => i.state === 'remediating' || i.severity === 'high');
+  const countOf = healthState => services.filter(s => s.health_state === healthState).length;
+  return `<div class="page-header"><div><h1>Overview</h1><p class="page-header__lead">What is broken, what Cloud Doctor is doing about it, and what needs you.</p></div><span class="tag">sample data from the sandbox run</span></div>
+  <div class="grid grid--stats section-gap">
+    <div class="panel stat-tile" ${openIncidents.length ? 'data-tone="bad"' : ''}><span class="stat-tile__value">${openIncidents.length}</span><span class="stat-tile__label">open incidents</span></div>
+    <div class="panel stat-tile"><span class="stat-tile__value" data-tone="bad">${countOf('UNHEALTHY')}</span><span class="stat-tile__label">services unhealthy</span></div>
+    <div class="panel stat-tile"><span class="stat-tile__value" data-tone="warn">${countOf('DEGRADED')}</span><span class="stat-tile__label">degraded</span></div>
+    <div class="panel stat-tile"><span class="stat-tile__value" data-tone="ok">${countOf('HEALTHY')}</span><span class="stat-tile__label">healthy</span></div>
+    <div class="panel stat-tile"><span class="stat-tile__value">1</span><span class="stat-tile__label">plan waiting for approval</span></div>
+  </div>
+  <div class="layout-split section-gap">
+    <section class="panel"><div class="panel__header"><h2>Needs attention</h2><span class="text-muted">${needsAttention.length} items, newest first</span></div>
+      ${needsAttention.map(i => `<button class="attention-item" data-action="open-incident" data-incident-id="${i.incident_id}"><span class="attention-item__severity" data-severity="${i.severity}"></span>
+        <span><b>${escapeHtml(i.title)}</b><br><span class="text-muted">${i.incident_id} · ${i.services.join(', ')} · opened ${i.age} ago · ${escapeHtml(i.top_cause.cause_id)}</span></span>
+        <span class="attention-item__action">${i.state === 'remediating' ? (can('decide_plans') ? pill('warn', 'Review &amp; approve') : pill('unknown', 'Awaiting an approver')) : pill('bad', 'Decide next step')}</span></button>`).join('') || '<div class="panel__body text-muted">Nothing needs you.</div>'}
+    </section>
+    <aside class="panel panel__body stack"><h2>Automation</h2><div class="cluster">${pill('ok', 'Detecting')} ${pill('accent', 'Recommend-only')}</div>
+      <p class="text-muted">Cloud Doctor proposes actions. Policy checks every plan, and anything of medium risk or above waits for an approver.</p>
+      ${factsList([['Policy','Layer 1 active · Layer 2 off'],['Actuator','not connected'],['LLM','off (deterministic)']])}</aside>
+  </div>
+  <div class="page-header"><h2>Services</h2><span class="text-muted">Select a service to see dependencies and incidents</span></div>
+  <div class="grid grid--cards">${services.map(s => `<button class="panel service-card" data-tone="${healthTone[s.health_state]}" data-action="open-service" data-service-name="${s.name}">
+    <div class="cluster cluster--between"><span class="service-card__name">${s.name}</span>${healthPill(s.health_state)}</div><div class="text-muted">${s.kind.replace('_', ' ')}</div>
+    <div class="stack stack--tight">${factsList([['Availability', s.availability], ['Latency', s.latency], ['Load', s.load], ...(s.incident_id ? [['Incident', `<a href="#" data-action="open-incident" data-incident-id="${s.incident_id}">${s.incident_id}</a>`]] : [])], true)}</div>
+    ${renderSparkline(s.trend, healthTone[s.health_state])}</button>`).join('')}</div>`;
+}
 
-function vTopology(){
- const P={loadgen:[110,70],api:[330,70],worker:[330,210],redis:[560,50],'app-db':[560,230]};const E=[['loadgen','api'],['api','redis'],['api','app-db'],['worker','redis'],['worker','app-db']];
- const col=s=>({ok:'var(--ok)',warn:'var(--warn)',bad:'var(--bad)',unk:'var(--unk)'}[s]);const sv=SVC.find(x=>x.n===S.node);const bad=(a,b)=>['bad','warn'].includes(SVC.find(x=>x.n===b).st)&&SVC.find(x=>x.n===a).st==='bad';
- return `<div class="head"><div><h1>Topology</h1><p>Who depends on whom. A dashed red line is a dependency that is failing right now.</p></div></div>
- <div class="two"><section class="panel pad"><svg class="topo" viewBox="0 0 700 300" role="img" aria-label="service dependency graph">
- <defs><marker id="ar" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L8 4L0 8z" fill="var(--faint)"/></marker></defs>
- ${E.map(([a,b])=>`<path class="e ${bad(a,b)?'bad':''}" marker-end="url(#ar)" d="M${P[a][0]+60} ${P[a][1]+22}L${P[b][0]-2} ${P[b][1]+22}"/>`).join('')}
- ${SVC.map(s=>`<g class="nd" data-node="${s.n}" tabindex="0" role="button" aria-label="${s.n} ${ST[s.st][0]}"><rect x="${P[s.n][0]-0}" y="${P[s.n][1]}" width="120" height="46" rx="10" stroke="${col(s.st)}" ${s.st==='unk'?'stroke-dasharray="5 3"':''} ${S.node===s.n?'style="stroke-width:3.5"':''}/><text x="${P[s.n][0]+14}" y="${P[s.n][1]+20}">${s.n}</text><text class="s" x="${P[s.n][0]+14}" y="${P[s.n][1]+36}">${ST[s.st][0].toLowerCase()}</text></g>`).join('')}</svg></section>
- <aside class="panel drawer"><div class="r" style="display:flex;justify-content:space-between"><h2>${sv.n}</h2>${pill(sv.st)}</div><span class="muted">${sv.kind.replace('_',' ')}</span>
- <dl class="kv"><dt>Availability</dt><dd>${sv.av}</dd><dt>Latency</dt><dd>${sv.p95}</dd><dt>Load</dt><dd>${sv.tp}</dd><dt>Depends on</dt><dd>${sv.dep.join(', ')||'nothing'}</dd><dt>Used by</dt><dd>${SVC.filter(x=>x.dep.includes(sv.n)).map(x=>x.n).join(', ')||'nothing'}</dd></dl>${spark(sv.sp,sv.st)}
- ${sv.inc?`<button class="btn pri" data-inc="${sv.inc}">Open ${sv.inc}</button>`:'<span class="muted">No open incident.</span>'}</aside></div>`}
+function renderTopology() {
+  const positions = {loadgen:[110,70], api:[330,70], worker:[330,210], redis:[560,50], 'app-db':[560,230]};
+  const edges = [['loadgen','api'],['api','redis'],['api','app-db'],['worker','redis'],['worker','app-db']];
+  const find = name => services.find(s => s.name === name);
+  const isFailing = (from, to) => ['UNHEALTHY','DEGRADED'].includes(find(to).health_state) && find(from).health_state === 'UNHEALTHY';
+  const node = find(ui.nodeName);
+  return `<div class="page-header"><div><h1>Topology</h1><p class="page-header__lead">Who depends on whom. A dashed red line is a dependency that is failing right now.</p></div></div>
+  <div class="layout-split"><section class="panel panel__body"><svg class="topology" viewBox="0 0 700 300" role="img" aria-label="service dependency graph">
+    <defs><marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path class="topology__arrow" d="M0 0L8 4L0 8z"/></marker></defs>
+    ${edges.map(([from, to]) => `<path class="topology__edge ${isFailing(from, to) ? 'topology__edge--failing' : ''}" marker-end="url(#arrow)" d="M${positions[from][0] + 60} ${positions[from][1] + 22}L${positions[to][0] - 2} ${positions[to][1] + 22}"/>`).join('')}
+    ${services.map(s => `<g class="topology__node" data-action="select-node" data-service-name="${s.name}" data-tone="${healthTone[s.health_state]}" data-selected="${ui.nodeName === s.name}" tabindex="0" role="button" aria-label="${s.name} ${s.health_state}">
+      <rect x="${positions[s.name][0]}" y="${positions[s.name][1]}" width="120" height="46" rx="10"/><text class="topology__label" x="${positions[s.name][0] + 14}" y="${positions[s.name][1] + 20}">${s.name}</text><text class="topology__sublabel" x="${positions[s.name][0] + 14}" y="${positions[s.name][1] + 36}">${s.health_state.toLowerCase()}</text></g>`).join('')}
+  </svg></section>
+  <aside class="panel panel__body stack"><div class="cluster cluster--between"><h2>${node.name}</h2>${healthPill(node.health_state)}</div><span class="text-muted">${node.kind.replace('_', ' ')}</span>
+    ${factsList([['Availability', node.availability],['Latency', node.latency],['Load', node.load],['Depends on', node.depends_on.join(', ') || 'nothing'],['Used by', services.filter(s => s.depends_on.includes(node.name)).map(s => s.name).join(', ') || 'nothing']])}
+    ${renderSparkline(node.trend, healthTone[node.health_state])}
+    ${node.incident_id ? `<button class="button button--primary" data-action="open-incident" data-incident-id="${node.incident_id}">Open ${node.incident_id}</button>` : '<span class="text-muted">No open incident.</span>'}</aside></div>`;
+}
 
-function vIncidents(){
- const L=Object.values(INC).filter(i=>S.filter==='all'||(S.filter==='open'?i.state!=='closed':i.state==='closed'));
- return `<div class="head"><div><h1>Incidents</h1><p>One row per problem. Related failures are grouped, so one cause is one incident.</p></div>
- <div class="chips" role="group" aria-label="filter">${[['all','All'],['open','Open'],['closed','Closed']].map(([k,t])=>`<button data-filter="${k}" aria-pressed="${S.filter===k}">${t}</button>`).join('')}</div></div>
- <section class="panel"><div class="row hd"><span>ID</span><span>Problem</span><span>Status</span><span>Likely cause</span><span>Opened</span></div>
- ${L.map(i=>`<button class="row" data-inc="${i.id}"><span class="mono">${i.id}</span><span><b>${esc(i.title)}</b><br><span class="muted">${i.svcs.join(' · ')}</span></span><span>${stPill(i.state)}</span><span class="mono muted">${i.cause}<br>ranking ${i.conf.toFixed(2)}</span><span class="muted">${i.opened}<br>${i.age}</span></button>`).join('')}</section>
- <p class="proto">Design note: INC-0003 covers api, worker and app-db as one incident. The running backend currently opens one per dependent; this is the target behaviour.</p>`}
+function renderIncidentList() {
+  const filtered = Object.values(incidents).filter(i => ui.filter === 'all' || (ui.filter === 'open' ? i.state !== 'closed' : i.state === 'closed'));
+  return `<div class="page-header"><div><h1>Incidents</h1><p class="page-header__lead">One row per problem. Related failures are grouped, so one cause is one incident.</p></div>
+  <div class="filter-group" role="group" aria-label="filter">${[['all','All'],['open','Open'],['closed','Closed']].map(([id, label]) => `<button class="filter-group__option" data-action="set-filter" data-filter="${id}" aria-pressed="${ui.filter === id}">${label}</button>`).join('')}</div></div>
+  <section class="panel"><div class="incident-row incident-row--head"><span>ID</span><span>Problem</span><span>Status</span><span>Likely cause</span><span>Opened</span></div>
+  ${filtered.map(i => `<button class="incident-row" data-action="open-incident" data-incident-id="${i.incident_id}"><span class="text-mono">${i.incident_id}</span><span><b>${escapeHtml(i.title)}</b><br><span class="text-muted">${i.services.join(' · ')}</span></span><span>${incidentStatePill(i.state)}</span><span class="text-mono text-muted">${i.top_cause.cause_id}<br>ranking ${i.top_cause.ranking.toFixed(2)}</span><span class="text-muted">${i.opened_at}<br>${i.age}</span></button>`).join('')}</section>
+  <p class="prototype-note">Design note: INC-0003 covers api, worker and app-db as one incident. The running backend currently opens one per dependent; this is the target behaviour.</p>`;
+}
 
-function steps(i){const n=['Detected','Diagnosed','Acting','Verified'];const sub=['rule dependency_down','ranking '+i.conf.toFixed(2),i.state==='closed'?'restart approved':i.state==='remediating'?'waiting for approval':'needs a human',i.verify?'7 of 7 checks':'not started'];
- return `<div class="steps" role="list">${n.map((t,k)=>`<div class="step ${k<i.step?'done':k===i.step?'now '+(i.state!=='closed'?'stuck':''):''}" role="listitem">${t}<small>${sub[k]}</small></div>`).join('')}</div>`}
+function renderStepper(incident) {
+  const notes = ['rule dependency_down', 'ranking ' + incident.top_cause.ranking.toFixed(2), incident.state === 'closed' ? 'restart approved' : incident.state === 'remediating' ? 'waiting for approval' : 'needs a human', incident.verification ? '7 of 7 checks' : 'not started'];
+  const stateOf = index => index < incident.progress ? 'done' : index === incident.progress ? (incident.state === 'closed' ? 'current' : 'blocked') : 'pending';
+  return `<ol class="stepper">${stepLabels.map((label, index) => `<li class="stepper__step" data-state="${stateOf(index)}">${label}<span class="stepper__note">${notes[index]}</span></li>`).join('')}</ol>`;
+}
 
-function decision(i){
- if(i.plan&&i.plan.done||S.decided[i.id]){const d=S.decided[i.id]||i.plan.done;return `<section class="panel decide ok pad"><h2>Decision</h2><p style="margin:8px 0 0"><span class="pill p-ok">${esc(d)}</span></p></section>`}
- if(!i.plan){return `<section class="panel decide pad" style="display:grid;gap:10px"><h2>Needs a human</h2><p style="margin:0">${esc(i.action.why)}</p>
-  <div class="note w">Suggested by the evidence: free or raise app-db connections (find the client holding them), then Cloud Doctor verifies recovery.</div>
-  <div class="btns"><button class="btn pri" data-ack="1">Take ownership</button><button class="btn" data-tab="diagnosis">Read diagnosis</button></div></section>`}
- const p=i.plan,c=S.confirm;
- return `<section class="panel decide pad" style="display:grid;gap:12px"><div class="ph" style="padding:0;border:0"><h2>Approve this action?</h2><span class="pill p-warn">risk ${p.risk}</span></div>
-  <div class="mono" style="background:var(--bg);border:1px solid var(--line);padding:10px 12px;border-radius:8px">$ ${esc(p.cmd)}</div>
-  <dl class="kv"><dt>Target</dt><dd>${p.target}</dd><dt>Policy</dt><dd>Layer 1 ${p.layer1}<br>Layer 2 ${p.layer2}</dd><dt>Plan hash</dt><dd class="mono">${p.hash}</dd><dt>Expires in</dt><dd>${p.expires}</dd></dl>
-  <div class="note">Your decision is bound to this exact plan. If the plan changes, the approval is void.</div>
-  ${can('decide')?(c?`<label for="why" class="muted">Reason for ${c==='approve'?'approving':'rejecting'} (saved in the audit log)</label><textarea id="why" placeholder="e.g. worker is stateless, queue is empty"></textarea><div class="btns"><button class="btn ${c==='approve'?'pri':'bad'}" data-go="${c}">Confirm ${c}</button><button class="btn" data-confirm="">Cancel</button></div>`:`<div class="btns"><button class="btn pri" data-confirm="approve">Approve</button><button class="btn bad" data-confirm="reject">Reject</button></div>`):gate('decide','Only approvers and admins can approve or reject plans.')}</section>`}
+function renderDecisionCard(incident) {
+  const resolution = ui.decisions[incident.incident_id] || (incident.plan && incident.plan.resolution);
+  if (resolution) return `<section class="panel panel--decision panel__body stack" data-state="resolved"><h2>Decision</h2>${pill('ok', escapeHtml(resolution))}</section>`;
+  if (!incident.plan) return `<section class="panel panel--decision panel__body stack"><h2>Needs a human</h2><p>${escapeHtml(incident.recommended_action.reason)}</p>
+    <div class="notice notice--warn">Suggested by the evidence: free or raise app-db connections (find the client holding them), then Cloud Doctor verifies recovery.</div>
+    <div class="cluster"><button class="button button--primary" data-action="take-ownership">Take ownership</button><button class="button" data-action="select-tab" data-tab="diagnosis">Read diagnosis</button></div></section>`;
+  const plan = incident.plan, pending = ui.pendingDecision;
+  return `<section class="panel panel--decision panel__body stack"><div class="cluster cluster--between"><h2>Approve this action?</h2>${pill('warn', 'risk ' + plan.risk)}</div>
+    <div class="command-line">$ ${escapeHtml(plan.command)}</div>
+    ${factsList([['Target', plan.target], ['Policy', `Layer 1 ${plan.layer1}<br>Layer 2 ${plan.layer2}`], ['Plan hash', `<span class="text-mono">${plan.plan_hash}</span>`], ['Expires in', plan.expires_in]])}
+    <div class="notice">Your decision is bound to this exact plan. If the plan changes, the approval is void.</div>
+    ${can('decide_plans') ? (pending
+      ? `<label for="decision-reason" class="text-muted">Reason for ${pending === 'approve' ? 'approving' : 'rejecting'} (saved in the audit log)</label><textarea class="textarea" id="decision-reason" placeholder="e.g. worker is stateless, queue is empty"></textarea>
+         <div class="cluster"><button class="button ${pending === 'approve' ? 'button--primary' : 'button--danger'}" data-action="submit-decision" data-decision="${pending}">Confirm ${pending}</button><button class="button" data-action="cancel-decision">Cancel</button></div>`
+      : `<div class="cluster"><button class="button button--primary" data-action="start-decision" data-decision="approve">Approve</button><button class="button button--danger" data-action="start-decision" data-decision="reject">Reject</button></div>`)
+      : lockHint('decide_plans', 'Only approvers and admins can approve or reject plans.')}</section>`;
+}
 
-function tabBody(i){const t=S.tab;
- if(t==='summary')return `<div class="panel pad" style="display:grid;gap:12px"><h2>What happened</h2><p style="margin:0;font-size:15px">${esc(i.sum)}</p>
-  <div class="note"><b>Likely cause:</b> <span class="mono">${i.cause}</span> · ranking ${i.conf.toFixed(2)} <span class="muted">(a ranking aid, not a probability)</span></div>
-  <div class="cols"><div><h3>Affected</h3><p class="chips" style="margin:6px 0">${i.svcs.map(s=>`<span class="tag">${s}</span>`).join('')}</p></div><div><h3>Not known yet</h3><ul style="margin:6px 0;padding-left:18px">${i.unk.map(u=>`<li>${esc(u)}</li>`).join('')||'<li>Nothing outstanding.</li>'}</ul></div></div></div>
-  <div class="panel pad" style="margin-top:16px"><h2 style="margin-bottom:8px">Recent events</h2>${tl(i.tl.slice(-4))}</div>`;
- if(t==='timeline')return `<div class="panel pad"><p class="muted" style="margin:0 0 10px">Ordered by event time (UTC). Suppressed events stay visible.</p>${tl(i.tl)}</div>`;
- if(t==='evidence'){return `<section class="panel"><div class="ph"><h2>Evidence</h2><span class="muted">${i.ev.length} items</span></div>${i.ev.map(e=>`<div class="evrow ${e[3]?'f':''}"><span class="mono">${e[0]}</span><span class="tag" style="justify-self:start">${e[1]}</span><span>${esc(e[2])}</span><span>${e[3]?'<span class="pill p-acc">key</span>':''}</span></div>`).join('')}</section>
-  ${i.logs.length?`<section class="panel pad" style="margin-top:16px"><div class="ph" style="padding:0 0 10px;border:0"><h2>Log lines</h2><span class="pill p-warn">untrusted text</span></div>${can('logs')?`<div class="logs">${i.logs.map(l=>`<div class="${l.includes('error')?'e':''}">${esc(l)}</div>`).join('')}</div>`:gate('logs','Raw logs need the Operator role or above.')}</section>`:''}`}
- if(t==='diagnosis')return `<section class="panel hyp"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><h2 class="mono" style="font-family:var(--mono)">#1 ${i.cause}</h2><span class="pill p-acc">candidate</span></div>
-  <div class="bar" role="img" aria-label="ranking ${i.conf}"><i style="width:${i.conf*100}%"></i></div><span class="muted">ranking ${i.conf.toFixed(2)} · orders hypotheses, not a probability</span>
-  <ul class="muted" style="margin:8px 0;padding-left:18px">${i.basis.map(b=>`<li>${b}</li>`).join('')}</ul>
-  <div class="cols"><div><h3>Supporting</h3><ul class="claims">${i.claims.map(c=>`<li><span class="tag">${c[0]}</span><span>${esc(c[1])}</span><a href="#" class="mono" data-tab="evidence">${c[2]}</a></li>`).join('')}</ul></div>
-  <div><h3>Contradicting</h3>${i.contra.length?'':'<p class="muted" style="margin:6px 0">None recorded. That is not proof there is none.</p>'}<h3 style="margin-top:14px">Alternatives</h3><ul class="claims">${i.alts.map(a=>`<li><span class="tag">${a[1]}</span><span><span class="mono">${a[0]}</span><br><span class="muted">${a[2]}</span></span><span></span></li>`).join('')||'<li class="muted">None considered.</li>'}</ul></div></div>
-  <div style="margin-top:14px" class="btns">${can('diagnose')?`<button class="btn" data-rediag="1">${S.rediag?'Running…':'Re-run diagnosis'}</button>`:gate('diagnose','Re-running a diagnosis needs the Operator role or above.')}</div></section>`;
- if(t==='remediation')return `<div class="panel pad" style="display:grid;gap:10px"><h2>Remediation</h2><p style="margin:0"><b>Recommended:</b> <span class="mono">${i.action.id}</span></p><p class="muted" style="margin:0">${esc(i.action.why)}</p>${i.plan?`<dl class="kv"><dt>Command</dt><dd class="mono">${esc(i.plan.cmd)}</dd><dt>Policy</dt><dd>Layer 1 ${i.plan.layer1}; Layer 2 ${i.plan.layer2}</dd></dl>`:''}</div>`;
- if(t==='verification')return i.verify?`<div class="panel pad"><h2>Verification: <span class="pill p-ok">${i.verify.verdict}</span></h2><ul class="claims" style="margin-top:12px">${i.verify.checks.map(c=>`<li><span class="pill p-ok">pass</span><span>${c[0]}</span><span></span></li>`).join('')}</ul></div>`:`<div class="panel pad muted">Verification starts after an action runs. Nothing to verify yet.</div>`;
- return `<div class="panel pad" style="display:grid;gap:8px"><h2>Report</h2><p class="mono" style="margin:0;white-space:pre-wrap">${esc(`# ${i.id} ${i.title}\nMode: deterministic · root cause confirmed: false\nLikely cause: ${i.cause} (ranking ${i.conf})\nMitigated: ${i.state==='closed'?'yes':'no'}`)}</p><div class="btns"><button class="btn" data-copy="1">Copy as Markdown</button></div></div>`}
-function tl(a){return `<ol class="tl">${a.map(e=>`<li><time>${e[0]}</time><span class="n ${e[1]}"></span><span>${esc(e[2])}</span></li>`).join('')}</ol>`}
+const renderTimeline = events => `<ol class="timeline">${events.map(e => `<li class="timeline__item"><time class="timeline__time">${e.time}</time><span class="timeline__marker" data-kind="${e.kind}"></span><span>${escapeHtml(e.text)}</span></li>`).join('')}</ol>`;
 
-function vIncident(){const i=INC[S.inc];const T=['summary','timeline','evidence','diagnosis','remediation','verification','report'];
- return `<p style="margin:0 0 12px"><a href="#" data-view="incidents">← Incidents</a></p>
- <div class="head" style="margin-bottom:0"><div><span class="mono muted">${i.id} · opened ${i.opened}</span><h1>${esc(i.title)}</h1></div>${stPill(i.state)}</div>${steps(i)}
- <div class="two"><div><div class="tabs" role="tablist">${T.map(t=>`<button role="tab" data-tab="${t}" aria-selected="${S.tab===t}">${t[0].toUpperCase()+t.slice(1)}</button>`).join('')}</div>${tabBody(i)}</div>
- <aside class="rail">${decision(i)}<section class="panel pad"><h3 style="margin-bottom:8px">Affected services</h3><div style="display:grid;gap:8px">${i.svcs.map(n=>{const s=SVC.find(x=>x.n===n);return `<button class="chip" data-svc="${n}" style="justify-content:space-between;width:100%">${n}${pill(s.st)}</button>`}).join('')}</div></section></aside></div>`}
+function renderIncidentTab(incident) {
+  const cause = incident.top_cause;
+  switch (ui.tab) {
+    case 'summary': return `<div class="panel panel__body stack"><h2>What happened</h2><p class="text-lead">${escapeHtml(incident.summary)}</p>
+      <div class="notice"><b>Likely cause:</b> <span class="text-mono">${cause.cause_id}</span> · ranking ${cause.ranking.toFixed(2)} <span class="text-muted">(a ranking aid, not a probability)</span></div>
+      <div class="grid grid--columns"><div class="stack stack--tight"><h3>Affected</h3><div class="cluster">${incident.services.map(s => `<span class="tag">${s}</span>`).join('')}</div></div>
+      <div class="stack stack--tight"><h3>Not known yet</h3><ul class="list-plain">${cause.unknowns.map(u => `<li>${escapeHtml(u)}</li>`).join('') || '<li>Nothing outstanding.</li>'}</ul></div></div></div>
+      <div class="panel panel__body stack section-gap"><h2>Recent events</h2>${renderTimeline(incident.timeline.slice(-4))}</div>`;
+    case 'timeline': return `<div class="panel panel__body stack"><p class="text-muted">Ordered by event time (UTC). Suppressed events stay visible.</p>${renderTimeline(incident.timeline)}</div>`;
+    case 'evidence': return `<section class="panel"><div class="panel__header"><h2>Evidence</h2><span class="text-muted">${incident.evidence.length} items</span></div>
+      ${incident.evidence.map(e => `<div class="evidence-row" data-key="${e.key}"><span class="text-mono">${e.evidence_id}</span><span class="tag">${e.source}</span><span>${escapeHtml(e.summary)}</span><span>${e.key ? pill('accent', 'key') : ''}</span></div>`).join('')}</section>
+      ${incident.log_lines.length ? `<section class="panel panel__body stack section-gap"><div class="cluster cluster--between"><h2>Log lines</h2>${pill('warn', 'untrusted text')}</div>
+      ${can('view_logs') ? `<div class="log-view">${incident.log_lines.map(l => `<div class="log-view__line" data-level="${l.level}">${escapeHtml(l.text)}</div>`).join('')}</div>` : lockHint('view_logs', 'Raw logs need the Operator role or above.')}</section>` : ''}`;
+    case 'diagnosis': return `<section class="panel panel__body stack"><div class="cluster cluster--between"><h2 class="text-mono">#1 ${cause.cause_id}</h2>${pill('accent', 'candidate')}</div>
+      <progress class="ranking-bar" value="${Math.round(cause.ranking * 100)}" max="100" aria-label="ranking ${cause.ranking}"></progress>
+      <span class="text-muted">ranking ${cause.ranking.toFixed(2)} · orders hypotheses, not a probability</span>
+      <ul class="list-plain text-muted">${cause.basis.map(b => `<li>${b}</li>`).join('')}</ul>
+      <div class="grid grid--columns"><div class="stack stack--tight"><h3>Supporting</h3><ul class="claim-list">${cause.claims.map(c => `<li class="claim-list__item"><span class="tag">${c.claim_type}</span><span>${escapeHtml(c.text)}</span><a href="#" class="text-mono" data-action="select-tab" data-tab="evidence">${c.evidence_ids}</a></li>`).join('')}</ul></div>
+      <div class="stack stack--tight"><h3>Contradicting</h3>${cause.contradicting.length ? '' : '<p class="text-muted">None recorded. That is not proof there is none.</p>'}<h3>Alternatives</h3>
+      <ul class="claim-list">${cause.alternatives.map(a => `<li class="claim-list__item"><span class="tag">${a.ranking}</span><span><span class="text-mono">${a.cause_id}</span><br><span class="text-muted">${a.note}</span></span><span></span></li>`).join('') || '<li class="text-muted">None considered.</li>'}</ul></div></div>
+      <div class="cluster">${can('rerun_diagnosis') ? `<button class="button" data-action="rerun-diagnosis">${ui.rediagRunning ? 'Running…' : 'Re-run diagnosis'}</button>` : lockHint('rerun_diagnosis', 'Re-running a diagnosis needs the Operator role or above.')}</div></section>`;
+    case 'remediation': return `<div class="panel panel__body stack"><h2>Remediation</h2><p><b>Recommended:</b> <span class="text-mono">${incident.recommended_action.action_id}</span></p><p class="text-muted">${escapeHtml(incident.recommended_action.reason)}</p>
+      ${incident.plan ? factsList([['Command', `<span class="text-mono">${escapeHtml(incident.plan.command)}</span>`], ['Policy', `Layer 1 ${incident.plan.layer1}; Layer 2 ${incident.plan.layer2}`]]) : ''}</div>`;
+    case 'verification': return incident.verification
+      ? `<div class="panel panel__body stack"><div class="cluster"><h2>Verification</h2>${pill('ok', incident.verification.verdict)}</div><ul class="claim-list">${incident.verification.checks.map(c => `<li class="claim-list__item">${pill(c.passed ? 'ok' : 'bad', c.passed ? 'pass' : 'fail')}<span>${c.name}</span><span></span></li>`).join('')}</ul></div>`
+      : '<div class="panel panel__body text-muted">Verification starts after an action runs. Nothing to verify yet.</div>';
+    default: return `<div class="panel panel__body stack"><h2>Report</h2><p class="text-mono">${escapeHtml(`# ${incident.incident_id} ${incident.title}\nMode: deterministic · root cause confirmed: false\nLikely cause: ${cause.cause_id} (ranking ${cause.ranking})\nMitigated: ${incident.state === 'closed' ? 'yes' : 'no'}`).replace(/\n/g, '<br>')}</p><div class="cluster"><button class="button" data-action="copy-report">Copy as Markdown</button></div></div>`;
+  }
+}
 
-function vAudit(){if(!can('audit'))return deny('Audit log','audit','Admins only.');
- return `<div class="head"><div><h1>Audit log</h1><p>Every detection, decision and action, chained by hash so tampering is visible.</p></div><div class="chain"><span class="pill p-ok">chain valid</span><span class="muted">${AUDIT.length} events</span></div></div>
- <section class="panel scroll"><table class="mx" style="min-width:640px"><thead><tr><th>Time</th><th>Actor</th><th>Event</th><th>Incident</th><th>Hash</th></tr></thead><tbody>${AUDIT.map(a=>`<tr><td class="mono" style="text-align:left">${a[0]}</td><td style="text-align:left">${a[1]}</td><td style="text-align:left">${a[2]}</td><td class="mono">${a[3]}</td><td class="mono muted">${a[4]}</td></tr>`).join('')}</tbody></table></section>`}
-function deny(t,p,who){return `<div class="head"><h1>${t}</h1></div><div class="panel pad" style="max-width:520px;display:grid;gap:10px"><h2>You don't have access</h2><p class="muted" style="margin:0">${who} Ask an admin for the role, or switch role from the menu at the top right (prototype only).</p></div>`}
-function vAccess(){if(!can('access'))return deny('Access','access','Only admins manage roles.');
- const me=eff();return `<div class="head"><div><h1>Access</h1><p>Roles decide what each person can see and do. Hidden or locked controls always say why.</p></div></div>
- <section class="panel scroll"><table class="mx" style="min-width:560px"><thead><tr><th>Permission</th>${Object.entries(ROLES).map(([k,r])=>`<th class="${k===me?'me':''}">${r.label}</th>`).join('')}</tr></thead><tbody>${PERMS.map(([k,t])=>`<tr><td>${t}</td>${Object.entries(ROLES).map(([rk,r])=>`<td class="${rk===me?'me':''}">${r.p.includes(k)?'<span class="yes">✓</span>':'<span class="no">—</span>'}</td>`).join('')}</tr>`).join('')}</tbody></table></section>
- <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr));margin-top:18px"><section class="panel pad" style="display:grid;gap:8px"><h2>Environment access mode</h2><p class="muted" style="margin:0">Set by the deployment, not by users.</p>
- <dl class="kv"><dt>rbac</dt><dd>Sign in, roles apply. Default for any real environment.</dd><dt>open</dt><dd>No sign-in. Everyone acts as Super Admin. For testing and demos only.</dd></dl>
- <div class="btns"><button class="btn ${S.env==='rbac'?'pri':''}" data-env="rbac">rbac</button><button class="btn ${S.env==='open'?'pri':''}" data-env="open">open (test)</button></div></section>
- <section class="panel pad" style="display:grid;gap:8px"><h2>Safety rules</h2><ul style="margin:0;padding-left:18px"><li>Open mode shows a banner on every page.</li><li>Open mode is refused when the API listens on a non-local address, unless explicitly overridden.</li><li>Every decision is logged with the actor, including <span class="mono">open-mode</span>.</li></ul></section></div>`}
+function renderIncidentDetail() {
+  const incident = incidents[ui.incidentId];
+  return `<p class="section-gap"><a href="#" data-action="open-view" data-view="incidents">${icon('back')} Incidents</a></p>
+  <div class="page-header"><div><span class="text-mono text-muted">${incident.incident_id} · opened ${incident.opened_at}</span><h1>${escapeHtml(incident.title)}</h1></div>${incidentStatePill(incident.state)}</div>${renderStepper(incident)}
+  <div class="layout-split"><div><div class="tabs" role="tablist">${incidentTabs.map(t => `<button class="tabs__tab" role="tab" data-action="select-tab" data-tab="${t}" aria-selected="${ui.tab === t}">${t[0].toUpperCase() + t.slice(1)}</button>`).join('')}</div>${renderIncidentTab(incident)}</div>
+  <aside class="rail">${renderDecisionCard(incident)}<section class="panel panel__body stack"><h3>Affected services</h3><div class="stack stack--tight">${incident.services.map(name => { const s = services.find(x => x.name === name); return `<button class="chip" data-action="open-service" data-service-name="${name}">${name}${healthPill(s.health_state)}</button>`; }).join('')}</div></section></aside></div>`;
+}
+
+function renderAccessDenied(title, who) {
+  return `<div class="page-header"><h1>${title}</h1></div><div class="panel panel__body stack"><h2>You don't have access</h2><p class="text-muted">${who} Ask an admin for the role, or switch role from the menu at the top right (prototype only).</p></div>`;
+}
+function renderAudit() {
+  if (!can('view_audit')) return renderAccessDenied('Audit log', 'Admins only.');
+  return `<div class="page-header"><div><h1>Audit log</h1><p class="page-header__lead">Every detection, decision and action, chained by hash so tampering is visible.</p></div><div class="cluster">${pill('ok', 'chain valid')}<span class="text-muted">${auditEvents.length} events</span></div></div>
+  <section class="panel scroll-x"><table class="matrix matrix--wide"><thead><tr><th>Time</th><th>Actor</th><th>Event</th><th>Incident</th><th>Hash</th></tr></thead><tbody>${auditEvents.map(a => `<tr><td class="text-mono">${a.time}</td><td>${a.actor}</td><td>${a.event_type}</td><td class="text-mono">${a.incident_id}</td><td class="text-mono text-muted">${a.hash}</td></tr>`).join('')}</tbody></table></section>`;
+}
+function renderAccess() {
+  if (!can('manage_access')) return renderAccessDenied('Access', 'Only admins manage roles.');
+  const current = effectiveRoleId();
+  return `<div class="page-header"><div><h1>Access</h1><p class="page-header__lead">Roles decide what each person can see and do. Hidden or locked controls always say why.</p></div></div>
+  <section class="panel scroll-x"><table class="matrix"><thead><tr><th>Permission</th>${Object.entries(roles).map(([id, r]) => `<th data-current="${id === current}">${r.label}</th>`).join('')}</tr></thead>
+  <tbody>${permissionLabels.map(([permission, label]) => `<tr><td>${label}</td>${Object.entries(roles).map(([id, r]) => `<td data-current="${id === current}">${r.permissions.includes(permission) ? '<span class="matrix__yes">✓</span>' : '<span class="matrix__no">—</span>'}</td>`).join('')}</tr>`).join('')}</tbody></table></section>
+  <div class="grid grid--halves"><section class="panel panel__body stack"><h2>Environment access mode</h2><p class="text-muted">Set by the deployment, not by users.</p>
+    ${factsList([['rbac', 'Sign in, roles apply. Default for any real environment.'], ['open', 'No sign-in. Everyone acts as Super Admin. For testing and demos only.']])}
+    <div class="cluster"><button class="button ${ui.envMode === 'rbac' ? 'button--primary' : ''}" data-action="set-env" data-env-mode="rbac">rbac</button><button class="button ${ui.envMode === 'open' ? 'button--primary' : ''}" data-action="set-env" data-env-mode="open">open (test)</button></div></section>
+  <section class="panel panel__body stack"><h2>Safety rules</h2><ul class="list-plain"><li>Open mode shows a banner on every page.</li><li>Open mode is refused when the API listens on a non-local address, unless explicitly overridden.</li><li>Every decision is logged with the actor, including <span class="text-mono">open-mode</span>.</li></ul></section></div>`;
+}
 
 /* ---------- shell ---------- */
-function shell(body){const open=Object.values(INC).filter(i=>i.state!=='closed').length;const r=ROLES[eff()];
- const nav=[['overview','Overview'],['topology','Topology'],['incidents','Incidents'],['audit','Audit'],['access','Access']].filter(([k])=>k!=='audit'||can('audit')||true);
- return `<header class="top"><div class="wrap"><span class="brand"><i></i>Cloud Doctor</span>
- <nav aria-label="Main">${nav.map(([k,t])=>`<button data-view="${k}" ${(S.view===k||(S.view==='incident'&&k==='incidents'))?'aria-current="page"':''}>${t}${k==='incidents'?`<span class="dot">${open}</span>`:''}${(k==='audit'&&!can('audit'))||(k==='access'&&!can('access'))?' 🔒':''}</button>`).join('')}</nav>
- <div class="tools"><span class="chip" title="Live event stream"><span class="live"></span>Live</span><button class="chip" data-theme="1" aria-label="Toggle theme">◐ Theme</button>
- <div class="rel"><button class="chip" data-menu="1" aria-haspopup="true" aria-expanded="${S.menu}">${S.env==='open'?'<span class="pill p-warn" style="padding:0 6px">OPEN</span>':'👤'} ${S.env==='open'?'Super Admin':r.label} ▾</button>
- ${S.menu?`<div class="menu" role="menu"><div class="muted" style="padding:4px 8px">Prototype: simulate who is signed in</div>${Object.entries(ROLES).map(([k,x])=>`<button class="opt" role="menuitemradio" aria-checked="${S.role===k&&S.env==='rbac'}" data-role="${k}"><span style="width:16px">${S.role===k&&S.env==='rbac'?'●':'○'}</span><span><b>${x.label}</b><small>${x.desc}</small></span></button>`).join('')}<hr><button class="opt" aria-checked="${S.env==='open'}" data-env="${S.env==='open'?'rbac':'open'}"><span style="width:16px">${S.env==='open'?'●':'○'}</span><span><b>Open test mode</b><small>Environment role = open: everyone is Super Admin</small></span></button></div>`:''}</div></div></div></header>
- ${S.env==='open'?`<div class="strip open"><div class="wrap"><b>Open test mode.</b> No sign-in; every visitor has Super Admin rights. Do not expose this environment.<a href="#" data-env="rbac">Switch to role-based access</a></div></div>`:''}
- <div class="wrap"><main>${body}</main></div>`}
-function render(){const v={overview:vOverview,topology:vTopology,incidents:vIncidents,incident:vIncident,audit:vAudit,access:vAccess}[S.view]();document.getElementById('app').innerHTML=shell(v)}
+function renderShell(body) {
+  const openCount = Object.values(incidents).filter(i => i.state !== 'closed').length, role = roles[effectiveRoleId()];
+  const navItems = [['overview','Overview'],['topology','Topology'],['incidents','Incidents'],['audit','Audit'],['access','Access']];
+  const locked = id => (id === 'audit' && !can('view_audit')) || (id === 'access' && !can('manage_access'));
+  return `<header class="topbar"><div class="container topbar__inner"><span class="brand"><span class="brand__mark"></span>Cloud Doctor</span>
+  <nav class="main-nav" aria-label="Main">${navItems.map(([id, label]) => `<button class="main-nav__item" data-action="open-view" data-view="${id}" ${(ui.view === id || (ui.view === 'incident' && id === 'incidents')) ? 'aria-current="page"' : ''}>${label}${id === 'incidents' ? `<span class="main-nav__badge">${openCount}</span>` : ''}${locked(id) ? icon('lock') : ''}</button>`).join('')}</nav>
+  <div class="topbar__tools"><span class="chip chip--static" title="Live event stream"><span class="live-dot"></span>Live</span><button class="chip" data-action="toggle-theme" aria-label="Toggle theme">${icon('contrast')} Theme</button>
+  <div class="popover-anchor"><button class="chip" data-action="toggle-menu" aria-haspopup="true" aria-expanded="${ui.menuOpen}">${ui.envMode === 'open' ? pill('warn', 'OPEN', 'pill--compact') : icon('user')} ${ui.envMode === 'open' ? 'Super Admin' : role.label} ${icon('chevron')}</button>
+  ${ui.menuOpen ? `<div class="popover" role="menu"><div class="popover__title">Prototype: simulate who is signed in</div>${Object.entries(roles).map(([id, r]) => `<button class="popover__option" role="menuitemradio" aria-checked="${ui.roleId === id && ui.envMode === 'rbac'}" data-action="set-role" data-role-id="${id}"><span><b>${r.label}</b><span class="popover__hint">${r.description}</span></span></button>`).join('')}<hr class="popover__divider">
+    <button class="popover__option" role="menuitemradio" aria-checked="${ui.envMode === 'open'}" data-action="set-env" data-env-mode="${ui.envMode === 'open' ? 'rbac' : 'open'}"><span><b>Open test mode</b><span class="popover__hint">Environment role = open: everyone is Super Admin</span></span></button></div>` : ''}</div></div></div></header>
+  ${ui.envMode === 'open' ? `<div class="mode-banner"><div class="container mode-banner__inner"><b>Open test mode.</b> No sign-in; every visitor has Super Admin rights. Do not expose this environment.<a href="#" data-action="set-env" data-env-mode="rbac">Switch to role-based access</a></div></div>` : ''}
+  <div class="container"><main class="page">${body}</main></div>`;
+}
+function render() {
+  const views = {overview: renderOverview, topology: renderTopology, incidents: renderIncidentList, incident: renderIncidentDetail, audit: renderAudit, access: renderAccess};
+  document.getElementById('app').innerHTML = renderShell(views[ui.view]());
+}
 
-/* ---------- events ---------- */
-document.addEventListener('click',e=>{const t=e.target.closest('[data-view],[data-inc],[data-svc],[data-tab],[data-filter],[data-menu],[data-role],[data-env],[data-theme],[data-confirm],[data-go],[data-rediag],[data-node],[data-ack],[data-copy]');
- if(!t){if(S.menu){S.menu=false;render()}return}
- const d=t.dataset;if(t.tagName==='A')e.preventDefault();
- if('menu' in d){S.menu=!S.menu}
- else if(d.role){S.role=d.role;S.env='rbac';S.menu=false;toast('Signed in as '+ROLES[d.role].label+' (simulated)');if(S.view==='audit'&&!can('audit')||S.view==='access'&&!can('access')){}}
- else if(d.env){S.env=d.env;S.menu=false;toast(d.env==='open'?'Open test mode on: everyone is Super Admin':'Role-based access restored')}
- else if('theme' in d){const r=document.documentElement;const dark=getComputedStyle(r).colorScheme.includes('dark');r.setAttribute('data-theme',dark?'light':'dark')}
- else if(d.view){S.view=d.view;S.menu=false}
- else if(d.inc){S.view='incident';S.inc=d.inc;S.tab='summary';S.confirm=null;S.menu=false;e.stopPropagation()}
- else if(d.svc){S.view='topology';S.node=d.svc}
- else if(d.node){S.node=d.node}
- else if(d.tab){S.tab=d.tab}
- else if(d.filter){S.filter=d.filter}
- else if('confirm' in d){S.confirm=d.confirm||null}
- else if(d.go){const why=(document.getElementById('why')||{}).value||'';const i=INC[S.inc];S.decided[i.id]=(d.go==='approve'?'Approved':'Rejected')+' by you just now'+(why?': '+why:'');S.confirm=null;toast('Plan '+(d.go==='approve'?'approved. The actuator will run it and verification follows.':'rejected. The incident stays open.'))}
- else if(d.rediag){S.rediag=true;render();setTimeout(()=>{S.rediag=false;toast('Diagnosis re-run: same top cause, ranking unchanged');render()},1200);return}
- else if(d.ack){toast('You now own INC-0003 (logged in the audit trail)')}
- else if(d.copy){try{navigator.clipboard.writeText('# '+INC[S.inc].id).then(()=>toast('Copied'),()=>toast('Copy blocked: select the text instead'))}catch(_){toast('Copy blocked: select the text instead')}}
- render();window.scrollTo({top:d.view||d.inc||d.svc?0:window.scrollY})});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&S.menu){S.menu=false;render()}if((e.key==='Enter'||e.key===' ')&&e.target.dataset&&e.target.dataset.node){e.preventDefault();S.node=e.target.dataset.node;render()}});
+/* ---------- actions: one handler per data-action value (kebab-case) ---------- */
+const actions = {
+  'toggle-menu': () => { ui.menuOpen = !ui.menuOpen; },
+  'set-role': d => { ui.roleId = d.roleId; ui.envMode = 'rbac'; ui.menuOpen = false; showToast('Signed in as ' + roles[d.roleId].label + ' (simulated)'); },
+  'set-env': d => { ui.envMode = d.envMode; ui.menuOpen = false; showToast(d.envMode === 'open' ? 'Open test mode on: everyone is Super Admin' : 'Role-based access restored'); },
+  'toggle-theme': () => { const root = document.documentElement; root.setAttribute('data-theme', getComputedStyle(root).colorScheme.includes('dark') ? 'light' : 'dark'); },
+  'open-view': d => { ui.view = d.view; ui.menuOpen = false; },
+  'open-incident': d => { ui.view = 'incident'; ui.incidentId = d.incidentId; ui.tab = 'summary'; ui.pendingDecision = null; ui.menuOpen = false; },
+  'open-service': d => { ui.view = 'topology'; ui.nodeName = d.serviceName; },
+  'select-node': d => { ui.nodeName = d.serviceName; },
+  'select-tab': d => { ui.tab = d.tab; },
+  'set-filter': d => { ui.filter = d.filter; },
+  'start-decision': d => { ui.pendingDecision = d.decision; },
+  'cancel-decision': () => { ui.pendingDecision = null; },
+  'submit-decision': d => {
+    const reason = (document.getElementById('decision-reason') || {}).value || '';
+    ui.decisions[ui.incidentId] = (d.decision === 'approve' ? 'Approved' : 'Rejected') + ' by you just now' + (reason ? ': ' + reason : '');
+    ui.pendingDecision = null;
+    showToast('Plan ' + (d.decision === 'approve' ? 'approved. The actuator will run it and verification follows.' : 'rejected. The incident stays open.'));
+  },
+  'rerun-diagnosis': () => { ui.rediagRunning = true; render(); setTimeout(() => { ui.rediagRunning = false; showToast('Diagnosis re-run: same top cause, ranking unchanged'); render(); }, 1200); return false; },
+  'take-ownership': () => showToast('You now own ' + ui.incidentId + ' (logged in the audit trail)'),
+  'copy-report': () => { try { navigator.clipboard.writeText('# ' + ui.incidentId).then(() => showToast('Copied'), () => showToast('Copy blocked: select the text instead')); } catch (_) { showToast('Copy blocked: select the text instead'); } },
+};
+document.addEventListener('click', event => {
+  const target = event.target.closest('[data-action]');
+  if (!target) { if (ui.menuOpen) { ui.menuOpen = false; render(); } return; }
+  if (target.tagName === 'A') event.preventDefault();
+  if (actions[target.dataset.action](target.dataset) === false) return;
+  render();
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && ui.menuOpen) { ui.menuOpen = false; render(); }
+  const node = event.target.closest && event.target.closest('[data-action="select-node"]');
+  if (node && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); ui.nodeName = node.dataset.serviceName; render(); }
+});
 render();
 </script>
