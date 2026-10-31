@@ -11,6 +11,7 @@ from datetime import UTC, datetime
 import httpx
 
 
+from ..normalize import normalize_log
 from .base import EMPTY, ERROR, OK, TIMEOUT, LogLine, LogResult, PromResult, ProbeResult, Series
 
 
@@ -64,8 +65,6 @@ class LokiHttpClient:
         self._c = client or httpx.Client(timeout=timeout_s)
 
     def query_range(self, logql: str, start: datetime, end: datetime, limit: int = 200) -> LogResult:
-        import json as _json
-
         params = {"query": logql, "start": int(start.timestamp() * 1e9), "end": int(end.timestamp() * 1e9), "limit": limit, "direction": "forward"}
         try:
             r = self._c.get(f"{self.base}/loki/api/v1/query_range", params=params)
@@ -80,13 +79,9 @@ class LokiHttpClient:
             for stream in r.json()["data"]["result"]:
                 lvl = stream.get("stream", {}).get("level", "")
                 for ns, text in stream["values"]:
-                    level = lvl
-                    if not level:  # services log JSON lines (contracts/telemetry.md); read level defensively
-                        try:
-                            level = str(_json.loads(text).get("level", ""))
-                        except (ValueError, AttributeError):
-                            level = ""
-                    lines.append(LogLine(_ts(int(ns) / 1e9), level, text))
+                    # the line's own level, else the stream label; any spelling (WARNING, 40, err) -> debug|info|warn|error
+                    n = normalize_log(text, level_hint=lvl)
+                    lines.append(LogLine(_ts(int(ns) / 1e9), "" if n.level == "unknown" else n.level, text))
             lines.sort(key=lambda l: l.t)
         except (ValueError, KeyError, TypeError):
             return LogResult(ERROR, logql, error="malformed response")

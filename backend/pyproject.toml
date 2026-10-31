@@ -27,7 +27,7 @@ dev = ["pytest==9.2.0"]
 package-dir = {"backend" = "."}
 packages = [
     "backend", "backend.domain", "backend.repositories", "backend.telemetry", "backend.detector",
-    "backend.incidents", "backend.rca", "backend.remediation", "backend.api",
+    "backend.incidents", "backend.rca", "backend.remediation", "backend.api", "backend.normalize",
 ]
 include-package-data = true
 
