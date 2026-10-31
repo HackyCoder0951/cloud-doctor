@@ -116,8 +116,9 @@ def redis_outage(recover_at: float | None = None, persistent: bool = False) -> d
 
 
 def worker_crash(recover_at: float | None = None) -> dict:
-    """EXP-02: worker exits; queue grows (redis alive); api healthy. With recover_at the worker is back from that time."""
-    b = Builder("worker_crash" + ("_recovered" if recover_at else ""), "Worker process killed at t=60s; api healthy; queue backlog grows")
+    """EXP-02: worker exits; api healthy. The worker exports queue_depth, so the series is ABSENT while it is dead (observed on the
+    sandbox, docs/dev/infra/STATUS.md) and reappears with the accumulated backlog after the restart. With recover_at the worker is back from that time."""
+    b = Builder("worker_crash" + ("_recovered" if recover_at else ""), "Worker process killed at t=60s; api healthy; queue_depth series absent while the worker is down")
     T, end = 60, recover_at
     b.log(T - 2, "worker", "error", "job failed: unexpected exception", error="worker panic")
     b.event(T + 3, "container_stop", "worker", container="cd-worker")
@@ -126,7 +127,8 @@ def worker_crash(recover_at: float | None = None) -> dict:
     b.gap("worker", "dependency_up:redis", T + 5, end)
     b.gap("worker", "dependency_up:app-db", T + 5, end)
     b.gap("worker", "memory_bytes", T + 5, end)
-    b.put("worker", "queue_depth", lambda t: 3 + (t - T) * 6, T, end)
+    b.put("worker", "queue_depth", lambda t: 3 + (t - T) * 6, T, T + 5)  # last scrapes before the exporter dies
+    b.gap("worker", "queue_depth", T + 5, end)
     if end:
         b.event(end, "container_start", "worker", container="cd-worker")
         b.put("worker", "start_time", BASE_EPOCH + end, end)
