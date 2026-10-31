@@ -61,7 +61,8 @@ def test_traffic_floor_is_above_one_rps(cfg):
 def test_worker_crash_only_worker_side(world, catalog, cfg):
     _, det, fired = run(world, catalog, cfg, "worker_crash", until_s=140)
     assert firing(fired, "service_down", "worker")
-    assert firing(fired, "queue_growth", "worker")
+    # the worker exports queue_depth, so a dead worker shows no queue series at all: growth cannot be observed (see backend-1)
+    assert not firing(fired, "queue_growth", "worker")
     assert not [a for _, a in fired if a.service == "api"]
     assert det.statuses["api"].state == "HEALTHY"
 
