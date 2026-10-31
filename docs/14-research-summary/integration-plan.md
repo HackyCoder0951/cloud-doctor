@@ -45,3 +45,18 @@ Coordinator draft. Stream branches are **not merged** until the user decides. Ev
 ### Contract change requests applied on `integration` (2026-10-31)
 Applied: policy-1, frontend-1, frontend-2, harness-2 (`contracts/cause_ids.md`), harness-3 (`contracts/audit_events.md`), backend-1 (`cd_queue_length` in the probe sidecar and `contracts/telemetry.md`). No change needed: harness-1. **Deferred, with reasons in each request file:** policy-2 (envelope attestations), frontend-3 (new endpoints), harness-4 (new collectors and RCA rules), and the backend's own use of `cd_queue_length` (its detector still reads `queue_depth`).
 Re-verified after the changes: contracts PASS; backend 146 (stub) and 131 + 19 skipped (real package); invariants 129; actuator 83; policy 108; harness 134; combined run 585 passed, 19 skipped, 0 failed; frontend `check:api` ok, 132 tests, `next build` compiles; `make smoke` PASS with 18 checks.
+
+## Handoff: where the cloud session stopped (2026-10-31)
+Branch `integration`. Everything below is committed and pushed; nothing is merged into `main`.
+
+**Done and verified (commands in the commit messages):** contract change requests policy-1, frontend-1, frontend-2, harness-2, harness-3 applied; harness-4 implemented (metrics, contract rows, backend evidence and RCA rules for connection exhaustion, network latency and disk, scenario files); backend/harness suites pass (backend 151 stub / 136 real + 19 skipped; harness 135); `tests/integration/live_contract_check.py` passed against the live backend and sandbox for every endpoint that needs no incident (0 failed, 7 not exercised).
+
+**Not verified (do these first on the laptop, where Docker works without the proxy/rate-limit problems of the cloud container):**
+1. Rebuild the sandbox and check the new probe flag: `make up`, then `cd_db_connection_refused` in Prometheus. The cloud rebuild was blocked by a Docker Hub rate limit (HTTP 429), so `cd_db_connection_refused` has never run; the rest of harness-4's probe metrics did (smoke test passed, connection hog observed once).
+2. Start the backend against the live sandbox: `CD_SESSION_TOKEN_FILE=<file> uvicorn backend.main:create --factory --port 8080`, hold all 100 database connections from a test container, wait for an incident, then re-run `python3 tests/integration/live_contract_check.py --token-file <file>` so the 7 incident-scoped operations are exercised against real data. Holding 96 of 100 connections caused no incident (the application kept working): that is correct behaviour, not a defect.
+3. Frontend against the real backend (not the mock): serve `frontend/out` and proxy `/api/v1` to the backend (nginx was not installable in the cloud container). The session cookie is `Secure`, so use https or a browser on `localhost`.
+4. The new RCA rules (connection counts, network latency, disk) were only run on synthetic fixtures; thresholds are provisional.
+
+**Still open:** policy-2 (envelope attestations), frontend-3 (`/stream?last_event_id`, `/auth/me`), the backend switching its worker-crash detection to `cd_queue_length`, harness injection for EXP-05/11/12 (connection hog, disk fill), PostgreSQL 18 for the backend, the Postgres audit sink, merging `integration` into `main` (needs your decision).
+
+**Commit identity:** commits here are authored as you; keep `git config user.name/email` set to your own before committing on the laptop.
