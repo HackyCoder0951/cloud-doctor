@@ -267,7 +267,7 @@ describe('Incident detail: every tab renders against the mock data', () => {
     installFetch();
     open('timeline');
     await screen.findByTestId('tl-TL-0001');
-    fireEvent.click(screen.getByRole('tab', { name: 'diagnosis' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'RCA' }));
     expect(nav.replace).toHaveBeenCalledWith('/incidents/view/?id=INC-0001&tab=diagnosis');
   });
 

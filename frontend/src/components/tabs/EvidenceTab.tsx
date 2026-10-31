@@ -18,7 +18,7 @@ function logLinesOf(payload: Record<string, unknown>): LogLine[] | null {
   });
 }
 
-function Payload({ e }: { e: Evidence }) {
+export function Payload({ e }: { e: Evidence }) {
   const lines = logLinesOf(e.payload);
   const rest = Object.fromEntries(Object.entries(e.payload).filter(([k]) => k !== 'lines'));
   const j = jsonText(rest, 3000);

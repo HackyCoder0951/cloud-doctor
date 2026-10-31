@@ -1,5 +1,6 @@
 // Pure request router for the mock API (contracts/openapi.yaml, base path /api/v1 already stripped).
 // Used by mock/server.mjs (real HTTP) and by the tests (stubbed fetch), so both see the same data.
+import { CODE_ANALYSIS } from './code.mjs';
 import { buildAudit, buildIncidents, metricSeries, serviceLogs, SERVICES, sha, tamper, topology, ts } from './data.mjs';
 
 const RE = {
@@ -126,6 +127,7 @@ export function createMock({ now = () => Date.now() } = {}) {
       if (c === 'timeline' && method === 'GET' && seg.length === 3) return json(200, [...inc.timeline].sort((x, y) => (x.event_time < y.event_time ? -1 : 1)));
       if (c === 'evidence' && method === 'GET' && seg.length === 3) return json(200, inc.evidence);
       if (c === 'diagnosis' && method === 'GET' && seg.length === 3) return inc.diagnosis ? json(200, inc.diagnosis) : err(404, 'not_found', 'no diagnosis yet');
+      if (c === 'code-analysis' && method === 'GET' && seg.length === 3) return CODE_ANALYSIS[b] ? json(200, CODE_ANALYSIS[b]) : err(404, 'not_found', 'no code analysis for this incident');
       if (c === 'diagnose' && method === 'POST' && seg.length === 3) {
         if (!key || !RE.idem.test(key)) return err(422, 'invalid_idempotency_key', 'Idempotency-Key required');
         emit('incident.updated', { incident_id: b, data: { rediagnose: true } });

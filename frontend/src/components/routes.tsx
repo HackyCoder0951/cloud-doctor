@@ -25,7 +25,7 @@ function IncidentRoute() {
   const t = sp.get('tab');
   const ev = sp.get('ev');
   if (!INCIDENT_ID_RE.test(id)) return <p role="alert" className="error">Missing or invalid incident id.</p>;
-  return <IncidentDetail incident={id} tab={isTab(t) ? t : 'timeline'} evidenceFocus={isEvidenceId(ev) ? ev : undefined} onTab={(next) => router.replace(`/incidents/view/?id=${id}&tab=${next}`)} />;
+  return <IncidentDetail incident={id} tab={isTab(t) ? t : 'summary'} evidenceFocus={isEvidenceId(ev) ? ev : undefined} onTab={(next) => router.replace(`/incidents/view/?id=${id}&tab=${next}`)} />;
 }
 
 function ServiceRoute() {

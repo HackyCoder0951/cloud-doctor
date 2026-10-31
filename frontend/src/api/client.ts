@@ -21,6 +21,7 @@ import type {
   Topology,
   Verification,
 } from './types';
+import { parseCodeAnalysis, type CodeAnalysis } from '@/lib/code-analysis';
 
 export const API_BASE: string = (process.env.NEXT_PUBLIC_API_BASE ?? '/api/v1').replace(/\/+$/, '');
 
@@ -189,4 +190,13 @@ export const api = {
   listAudit: (opts: { incident?: string; afterSeq?: number; limit?: number } = {}) =>
     getJson<AuditResponse>('/audit', { incident: opts.incident, after_seq: opts.afterSeq, limit: opts.limit }),
   getStatus: () => getJson<SelfStatus>('/status'),
+  /** Proposed endpoint (frontend-4). Resolves to null when the backend does not provide it (404): "not available", never an empty success. */
+  getCodeAnalysis: async (id: string): Promise<CodeAnalysis | null> => {
+    try {
+      return parseCodeAnalysis(await getJson<unknown>(`/incidents/${enc(id)}/code-analysis`));
+    } catch (e) {
+      if (e instanceof ApiError && e.kind === 'not_found') return null;
+      throw e;
+    }
+  },
 };
