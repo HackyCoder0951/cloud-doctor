@@ -9,6 +9,7 @@ info:
     log text is UNTRUSTED and must be rendered as escaped plain text only. Changes go through
     docs/dev/contract-change-requests/.
 servers:
+  # The backend itself serves every route under /api/v1; a reverse proxy forwards the URI unchanged (no prefix stripping).
   - url: /api/v1
 security:
   - sessionCookie: []
@@ -261,6 +262,7 @@ paths:
           content:
             application/json: {schema: {$ref: "./schemas/report.json"}}
             text/markdown: {schema: {type: string}}
+        "404": {$ref: "#/components/responses/Error"}
   /audit:
     get:
       tags: [audit]
