@@ -21,7 +21,7 @@ steady_state:
   - {service: api, sli: latency_p95_seconds, op: "<=", threshold: 0.5}
   - {service: worker, sli: queue_depth, op: "<=", threshold: 100}
 ground_truth:
-  cause_equivalence_class: [db_connection_exhaustion, connection_pool_exhausted]
+  cause_equivalence_class: [app_db_connection_exhaustion]
   cause_service: app-db
   decoy_causes: []
 accepted_remediation:

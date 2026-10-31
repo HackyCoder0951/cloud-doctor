@@ -22,7 +22,7 @@ steady_state:
   - {service: api, sli: latency_p95_seconds, op: "<=", threshold: 0.5}
   - {service: worker, sli: queue_depth, op: "<=", threshold: 100}
 ground_truth:
-  cause_equivalence_class: [telemetry_collection_failure, collection_failed]
+  cause_equivalence_class: [telemetry_collection_failed]
   cause_service: null
   decoy_causes: [api_unavailable, redis_unavailable]
 accepted_remediation:
