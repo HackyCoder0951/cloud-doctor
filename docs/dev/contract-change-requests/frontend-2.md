@@ -7,3 +7,6 @@
 **Impact.** Backend (route prefix), infra/nginx (proxy_pass form).
 
 **Workaround used.** `infra/nginx/cloud-doctor.conf` uses `proxy_pass http://cd_api;` (no URI part), which forwards `/api/v1/...` unchanged, and the static checker enforces that form. If the backend serves routes at the root instead, change that single line to `proxy_pass http://cd_api/;` and update `scripts/check-nginx.mjs`.
+
+## Resolution (coordinator, 2026-10-31)
+**Applied.** `contracts/openapi.yaml` states that the backend serves `/api/v1` and the proxy forwards the URI unchanged; this matches `backend/api/app.py` and the nginx config.

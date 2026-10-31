@@ -13,3 +13,6 @@
 **Proposed change.** `GET /auth/me` returning `{role: viewer|operator|admin}` (UX only; the API keeps enforcing authorization).
 
 **Workaround used.** The buttons are always shown to a logged-in user; a `403` is displayed as "The API refused this action (authorization or policy)" together with any pattern-valid rule ids.
+
+## Resolution (coordinator, 2026-10-31)
+**Not applied (deferred).** `last_event_id` on `/stream` and `GET /auth/me` are new endpoints and behavior that need backend implementation and tests. The dashboard already works without them (resync after reconnect; role not hidden in the UI).

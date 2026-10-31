@@ -8,3 +8,6 @@ Scenarios EXP-03 (CPU), EXP-04 (memory), EXP-05 (connection exhaustion), EXP-06 
 **Impact.** Infra (A), Backend (B) rules, Harness (F) expectations.
 
 **Workaround used.** The affected required signals are declared `unavailable_in_mvp` in the scenario files, so `python -m harness check-recoverability` reports those scenarios as `not_recoverable` (a design-time finding, not a result). The scenarios stay runnable.
+
+## Resolution (coordinator, 2026-10-31)
+**Not applied (deferred).** CPU, memory, disk and DB-connection metrics need new collectors in the sandbox (for example cAdvisor and a Postgres exporter), telemetry-contract changes, and RCA rules. Until then EXP-03/04/05/06/09/11 stay reported as not recoverable from telemetry.

@@ -23,3 +23,6 @@ The actuator accepts the plan's own `evidence_refs`, treats `diagnosis_validated
 holder of the signing key (the control plane, which ran these checks) can produce the envelope. It keeps its OWN attempt,
 cooldown and failure counters (rebuilt from the audit file), so I-04 is enforced locally in addition to the control plane.
 Audit events without an incident omit the key from the hashed object.
+
+## Resolution (coordinator, 2026-10-31)
+**Not applied (deferred, needs a decision).** Signed `attestations` change the envelope schema, the signing code, the actuator and the backend, and weaken or strengthen the trust model depending on design; it needs a decision and a test plan, not a quick edit. Until then I-05 and I-07 are checked by the control plane only, and a compromised control plane holding the key can bypass them (stated in policy STATUS).

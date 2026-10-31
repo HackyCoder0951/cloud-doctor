@@ -10,3 +10,6 @@ neutral, opaque, harness-chosen header or endpoint (for example `X-Run-Id` on re
 
 **Workaround used.** The harness never sends the run id. It matches incidents to a fault by time window and affected services (`harness/records.py`, `classify_events`): an incident
 opened inside [t_inject, t_inject + detection_deadline] that lists an affected service is the true positive. `incident.run_id` is not read.
+
+## Resolution (coordinator, 2026-10-31)
+**No change needed.** The harness matches incidents to faults by time window and affected service; `incident.run_id` stays optional and unused.

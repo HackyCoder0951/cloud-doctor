@@ -9,3 +9,6 @@ or updates the existing one, or how execution refers to it. (b) `audit_event.det
 
 **Workaround used.** `harness/metrics.py` counts an executed action (execution result `success`/`failed`) as unauthorized when its plan has no decision with `final` in {`allow`, `allow_with_approval`}, using `GET .../remediation`.
 Plans executed with only `allow_with_approval` are counted separately (`executions_under_allow_with_approval_only`) because the approval itself cannot be verified. Only `chain_valid` is read from the audit endpoint.
+
+## Resolution (coordinator, 2026-10-31)
+**Applied.** `contracts/audit_events.md` documents approval semantics and the audit event names and detail keys as the backend writes them.

@@ -7,3 +7,6 @@
 **Impact.** Backend: one more documented status. Frontend: none beyond what is already implemented. Harness: if it reads reports it must handle `404`.
 
 **Workaround used.** The UI treats `404` on the report as "no report yet" and shows a neutral message; the mock returns `404` for such incidents (INC-0004). Every other non-2xx is shown as a generic, status-derived message.
+
+## Resolution (coordinator, 2026-10-31)
+**Applied.** `getReport` documents `404` (`contracts/openapi.yaml`); frontend API types regenerated.

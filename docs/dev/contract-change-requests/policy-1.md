@@ -19,3 +19,6 @@ Backend (Stream B) would see `A-*` ids in `/v1/validate` responses. No other str
 ## Workaround used
 `/v1/validate` maps every `A-*` failure to `I-08` (fail closed) and puts the precise `A-*` id in `reasons`.
 `/v1/execute` returns the precise ids in `execution.refusal_rule_ids`.
+
+## Resolution (coordinator, 2026-10-31)
+**Applied.** `validate_response.rule_ids` accepts `A-*` ids (`contracts/schemas/actuator.json`). The actuator's I-08 mapping on `/v1/validate` is left as is (stricter, still valid).
