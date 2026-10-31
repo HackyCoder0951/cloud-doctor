@@ -33,6 +33,7 @@ If **no series exists at all** for `up{service="X"}` the telemetry is missing â†
 | `cd_db_connections` | gauge | `service` (=`app-db`) | probes sidecar (app-db target) | client connections to the database from `pg_stat_activity`, excluding the probe; absent while the database cannot be queried (harness-4) |
 | `cd_db_max_connections` | gauge | `service` (=`app-db`) | probes sidecar | configured `max_connections` (harness-4) |
 | `cd_db_connections_by_client` | gauge | `service` (=`app-db`), `client` | probes sidecar | connections grouped by `application_name` (`api`, `worker`, or `unknown`); only clients with at least one connection appear (harness-4) |
+| `cd_db_connection_refused` | gauge 0/1 | `service` (=`app-db`) | probes sidecar | 1 when the database refused the probe's connection with `too many clients` (connection limit reached; the counts are then unavailable exactly when they matter); absent while the port does not answer (harness-4) |
 | `cd_db_probe_duration_seconds` | gauge | `service` (=`app-db`) | probes sidecar | round trip of `select 1` measured by the probe from inside the sandbox network, not through any fault proxy; unchanged while the application-to-database path is slow (harness-4) |
 | `jobs_processed_total` | counter | `service`, `result` (`ok`,`error`) | worker | jobs finished |
 | `loadgen_requests_total` | counter | `service`, `status` | loadgen | synthetic traffic generated (`status` = HTTP code or `error`) |
