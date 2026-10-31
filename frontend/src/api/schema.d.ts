@@ -1173,6 +1173,7 @@ export interface operations {
                     "text/markdown": string;
                 };
             };
+            404: components["responses"]["Error"];
         };
     };
     listAudit: {
