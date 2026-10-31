@@ -86,6 +86,7 @@ class Facts:
         self.feed_failed: Evidence | None = None
         self.versions: dict[str, list[str]] = {}
         self.version_since: dict[str, dict[str, datetime]] = {}
+        self.clients: dict[str, dict[str, float]] = {}  # service -> latest connections per client (db_connections_by_client)
         for e in sorted(self.evidence, key=lambda x: (x.collected_at, x.evidence_id)):
             self._ingest(e)
         self.window_end = max((ts.window_end for ts in self._ts.values()), default=None)
@@ -105,6 +106,12 @@ class Facts:
                     first_seen.setdefault(v["version"], v["t"])
                 self.versions[e.service] = list(first_seen)  # ordered by first appearance: [..., previous, current]
                 self.version_since[e.service] = {k: parse_ts(t) for k, t in first_seen.items()}
+                self._ts[key] = TS(e.service, m, [], e, parse_ts(p["window"]["end"]))
+                return
+            if m == "db_connections_by_client":
+                rows = p.get("clients", [])
+                last = max((r["t"] for r in rows), default=None)
+                self.clients[e.service] = {r["client"]: float(r["v"]) for r in rows if r["t"] == last}
                 self._ts[key] = TS(e.service, m, [], e, parse_ts(p["window"]["end"]))
                 return
             pts = [(parse_ts(s["t"]), float(s["v"])) for s in p.get("series", [])]

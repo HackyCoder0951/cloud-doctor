@@ -90,6 +90,12 @@ class FixturePromClient:
             for o, v in pts:
                 out.setdefault(str(v), []).append((self.s.at(o), 1.0))
             return [Series({"version": v}, p) for v, p in out.items()]
+        if key == "db_connections_by_client":  # sample value is {client: count}; one series per client
+            per: dict[str, list] = {}
+            for o, v in (pts[-1:] if instant else pts):
+                for client, n in dict(v).items():
+                    per.setdefault(client, []).append((self.s.at(o), float(n)))
+            return [Series({"client": c}, p) for c, p in per.items()]
         if instant:
             o, v = pts[-1]
             return [Series({"service": service}, [(self.s.at(o), float(v))])]

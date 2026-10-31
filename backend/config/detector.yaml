@@ -22,6 +22,13 @@ metrics:
   # Not in contracts/telemetry.md (assumption: default prometheus_client process collector). Optional signals.
   memory_bytes: 'process_resident_memory_bytes{service="$service"}'
   cpu_cores: 'rate(process_cpu_seconds_total{service="$service"}[30s])'
+  # Added with change request harness-4 (contracts/telemetry.md): database and filesystem saturation signals.
+  db_connections: 'cd_db_connections{service="$service"}'
+  db_max_connections: 'cd_db_max_connections{service="$service"}'
+  db_connections_by_client: 'cd_db_connections_by_client{service="$service"}'
+  db_probe_seconds: 'cd_db_probe_duration_seconds{service="$service"}'
+  db_call_p95: 'histogram_quantile(0.95, sum by (le) (rate(db_call_duration_seconds_bucket{service="$service"}[30s])))'
+  fs_used_ratio: 'cd_fs_used_bytes{service="$service"} / on(service, mount) cd_fs_size_bytes{service="$service"}'
 
 # kinds: catalog service kinds the rule applies to.
 rules:

@@ -27,10 +27,11 @@ from backend.telemetry.base import (EMPTY, ChangeFeed, LogClient, Prober, PromCl
 MAX_LINES, MAX_LINE_CHARS = 100, 500
 
 KIND_METRICS = {
-    "app": ["up", "request_rate", "error_ratio", "latency_p95", "build_version", "start_time", "memory_bytes", "cpu_cores"],
-    "queue_worker": ["up", "queue_depth", "start_time", "memory_bytes"],
+    "app": ["up", "request_rate", "error_ratio", "latency_p95", "build_version", "start_time", "memory_bytes", "cpu_cores",
+            "db_call_p95", "fs_used_ratio"],
+    "queue_worker": ["up", "queue_depth", "start_time", "memory_bytes", "db_call_p95"],
     "cache": ["up", "cd_service_up"],
-    "database": ["up", "cd_service_up"],
+    "database": ["up", "cd_service_up", "db_connections", "db_max_connections", "db_connections_by_client", "db_probe_seconds"],
     "load_generator": ["up", "start_time"],
 }
 
@@ -78,6 +79,14 @@ class EvidenceCollector:
             payload = {**base, "versions": versions, "series": []}
             observed = end
             summary = f"{svc} versions seen: {sorted({v['version'] for v in versions}) or 'none'}"
+        elif metric == "db_connections_by_client":
+            clients = sorted(({"t": iso(p[0]), "client": s.labels.get("client", "unknown"), "v": p[1]} for s in res.series for p in s.points),
+                             key=lambda r: (r["t"], r["client"]))
+            payload = {**base, "clients": clients, "series": []}
+            observed = end
+            last_t = clients[-1]["t"] if clients else None
+            latest = sorted(((r["client"], r["v"]) for r in clients if r["t"] == last_t), key=lambda kv: -kv[1])
+            summary = f"{svc} connections by client (latest): " + (", ".join(f"{c}={_fmt(v)}" for c, v in latest[:5]) or "none")
         else:
             pts = sorted(((t, v) for s in res.series for t, v in s.points), key=lambda p: p[0])
             payload = {**base, "series": [{"t": iso(t), "v": v} for t, v in pts]}
@@ -103,6 +112,8 @@ class EvidenceCollector:
             return True  # a signal that disappeared is itself notable
         if metric == "build_version":
             return len({v["version"] for v in payload.get("versions", [])}) > 1
+        if metric == "db_connections_by_client":
+            return bool(payload.get("clients"))
         vals = [p["v"] for p in payload.get("series", [])]
         if len(vals) < 2:
             return False
