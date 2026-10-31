@@ -62,8 +62,9 @@ def probe_db():
             rows = conn.execute("select coalesce(nullif(application_name, ''), 'unknown'), count(*) from pg_stat_activity "
                                 "where backend_type = 'client backend' and pid <> pg_backend_pid() group by 1").fetchall()
             return 1, {"duration": took, "limit": limit, "by_client": {name: int(n) for name, n in rows}}, 0
-    except psycopg.errors.TooManyConnections:
-        return 1, None, 1
+    except psycopg.OperationalError as exc:
+        # a refused connection carries no SQLSTATE client-side (it is a plain OperationalError), so match the server message
+        return 1, None, 1 if "too many clients" in str(exc) else 0
     except Exception:  # noqa: BLE001 - the port answers but the database does not: up, with no stats
         return 1, None, 0
 
