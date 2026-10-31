@@ -16,3 +16,6 @@ __pycache__/
 .venv/
 out/
 dist/
+
+# generated infra output
+infra/generated/

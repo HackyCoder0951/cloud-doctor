@@ -1,0 +1,135 @@
+# Cloud Doctor sandbox stack (plain Docker; to be run inside a micro-VM or dedicated VM later).
+# Start with: make up   (generates infra/.env and infra/generated/*, then docker compose up)
+#
+# Isolation rules:
+#   * cd_sandbox is an INTERNAL network: sandbox containers have no route out;
+#   * only api (127.0.0.1:18000) and prometheus (127.0.0.1:9090) / loki (127.0.0.1:3100) are published, on loopback only;
+#   * sandbox containers carry the label cloud-doctor.sandbox=true; infrastructure containers do NOT
+#     (so the actuator can never act on them);
+#   * no host paths and no Docker socket are mounted anywhere;
+#   * restart policy is "no": a faulted container stays down until Cloud Doctor (or the operator) restarts it.
+name: cd
+
+x-sandbox-labels: &sandbox_labels
+  cloud-doctor.sandbox: "true"
+
+x-sim: &sim
+  build: ./sim
+  restart: "no"
+  networks: [cd_sandbox]
+  volumes: [cd_logs:/logs]
+
+networks:
+  cd_sandbox:
+    internal: true
+  cd_edge: {}
+
+volumes:
+  cd_logs: {}
+  cd_prometheus: {}
+  cd_loki: {}
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: cd-redis
+    restart: "no"
+    labels: *sandbox_labels
+    networks: [cd_sandbox]
+
+  app-db:
+    image: postgres:18
+    container_name: cd-app-db
+    restart: "no"
+    labels: *sandbox_labels
+    environment:
+      POSTGRES_PASSWORD: ${APP_DB_PASSWORD:?run make up so infra/.env is generated}
+    networks: [cd_sandbox]
+
+  api:
+    <<: *sim
+    image: cd-sim:local
+    container_name: cd-api
+    command: python -m app.api
+    labels: *sandbox_labels
+    environment:
+      SERVICE_NAME: api
+      APP_VERSION: ${API_VERSION:-1.0.0}
+      REDIS_HOST: cd-redis
+      DB_HOST: cd-app-db
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?}
+      LOG_FILE: /logs/api.log
+    networks: [cd_sandbox, cd_edge]
+    ports: ["127.0.0.1:18000:8000"]
+
+  worker:
+    <<: *sim
+    image: cd-sim:local
+    container_name: cd-worker
+    command: python -m app.worker
+    labels: *sandbox_labels
+    environment:
+      SERVICE_NAME: worker
+      REDIS_HOST: cd-redis
+      DB_HOST: cd-app-db
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?}
+      LOG_FILE: /logs/worker.log
+
+  loadgen:
+    <<: *sim
+    image: cd-sim:local
+    container_name: cd-loadgen
+    command: python -m app.loadgen
+    labels: *sandbox_labels
+    environment:
+      SERVICE_NAME: loadgen
+      TARGET_URL: http://cd-api:8000/work
+      LOG_FILE: /logs/loadgen.log
+
+  probes:
+    <<: *sim
+    image: cd-sim:local
+    container_name: cd-probes          # infrastructure: deliberately NO sandbox label
+    command: python -m app.probes
+    environment:
+      SERVICE_NAME: probes
+      REDIS_HOST: cd-redis
+      DB_HOST: cd-app-db
+
+  prometheus:
+    image: prom/prometheus:v3.15.1
+    container_name: cd-prometheus      # infrastructure: no sandbox label
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=2d
+      - --web.listen-address=0.0.0.0:9090
+    volumes:
+      - ./generated/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - cd_prometheus:/prometheus
+    networks: [cd_sandbox, cd_edge]
+    ports: ["127.0.0.1:9090:9090"]
+
+  loki:
+    image: grafana/loki:3.6.11
+    container_name: cd-loki            # infrastructure: no sandbox label
+    profiles: [logs]
+    restart: unless-stopped
+    command: [-config.file=/etc/loki/loki.yml]
+    volumes:
+      - ./logging/loki.yml:/etc/loki/loki.yml:ro
+      - cd_loki:/loki
+    networks: [cd_sandbox, cd_edge]
+    ports: ["127.0.0.1:3100:3100"]
+
+  promtail:
+    image: grafana/promtail:3.6.11
+    container_name: cd-promtail        # infrastructure: no sandbox label
+    profiles: [logs]
+    restart: unless-stopped
+    command: [-config.file=/etc/promtail/promtail.yml]
+    volumes:
+      - ./logging/promtail.yml:/etc/promtail/promtail.yml:ro
+      - cd_logs:/logs:ro               # shared named volume, read-only; no host paths, no Docker socket
+    networks: [cd_sandbox]
