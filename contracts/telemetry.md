@@ -25,6 +25,7 @@ If **no series exists at all** for `up{service="X"}` the telemetry is missing â†
 | `http_request_duration_seconds` | histogram | `service`, `route`, `le` | api | latency of handled requests |
 | `cd_dependency_up` | gauge 0/1 | `service`, `dependency` | api, worker | whether this service currently reaches its dependency (`redis`, `app-db`) |
 | `queue_depth` | gauge | `service`, `queue` | worker | length of the `jobs` list in Redis; **not exported while Redis is unreachable** (absent series) |
+| `cd_queue_length` | gauge | `service` (=`redis`), `queue` | probes sidecar (redis target) | length of the `jobs` list in Redis, measured by the probe, **independent of the worker**: it keeps rising while the worker is dead, where `queue_depth` is absent; absent only while Redis is unreachable (backend-1, added after freeze v1) |
 | `jobs_processed_total` | counter | `service`, `result` (`ok`,`error`) | worker | jobs finished |
 | `loadgen_requests_total` | counter | `service`, `status` | loadgen | synthetic traffic generated (`status` = HTTP code or `error`) |
 | `process_start_time_seconds` | gauge | `service` | api, worker, loadgen | process start; a change means a restart |
