@@ -26,6 +26,9 @@ v=$(q 'sum(rate(http_requests_total{service="api",status=~"5.."}[30s]))'); [[ "$
 v=$(q 'queue_depth{service="worker",queue="jobs"}'); python3 - "$v" <<'EOF' && ok "worker queue_depth present and small ($v)" || bad "worker queue_depth = $v"
 import sys; v=sys.argv[1]; sys.exit(0 if v!="NONE" and float(v)<50 else 1)
 EOF
+v=$(q 'cd_queue_length{service="redis",queue="jobs"}'); python3 - "$v" <<'EOF' && ok "probe cd_queue_length present and small ($v)" || bad "probe cd_queue_length = $v"
+import sys; v=sys.argv[1]; sys.exit(0 if v!="NONE" and float(v)<50 else 1)
+EOF
 for m in process_start_time_seconds build_info cd_dependency_up; do
   v=$(q "count($m)"); [[ "$v" != NONE ]] && ok "metric $m present" || bad "metric $m missing"
 done
