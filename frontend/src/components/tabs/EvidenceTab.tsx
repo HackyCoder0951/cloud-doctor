@@ -1,13 +1,17 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '@/api/client';
 import type { Evidence } from '@/api/types';
-import { ErrorNote, fmtTime, Loading } from '@/components/common';
+import { ErrorNote, fmtTime } from '@/components/common';
 import { LogLines, type LogLine } from '@/components/LogLines';
 import { MissingSignalBadge, Tag } from '@/components/badges';
 import { useLiveReload } from '@/components/Live';
+import { EmptyState, Skeleton } from '@/components/ui';
+import { evidenceRole, topHypothesis, type EvidenceRole } from '@/lib/incident-view';
 import { jsonText, Untrusted } from '@/lib/untrusted';
+import { useIncidentBundle } from '@/lib/useIncidentBundle';
 import { useApi } from '@/lib/useApi';
+import { EvidenceCard, useEvidenceDrawer } from '@/components/EvidenceDrawer';
 
 function logLinesOf(payload: Record<string, unknown>): LogLine[] | null {
   const l = payload.lines;
@@ -31,8 +35,17 @@ export function Payload({ e }: { e: Evidence }) {
   );
 }
 
+const ROLE_FILTERS: { id: EvidenceRole | 'all'; label: string }[] = [
+  { id: 'all', label: 'All' }, { id: 'supporting', label: 'Supporting' }, { id: 'contradicting', label: 'Contradicting' }, { id: 'context', label: 'Context' },
+];
+
 export function EvidenceTab({ incident, focus }: { incident: string; focus?: string }) {
   const { data, error, loading, reload } = useApi(() => api.getEvidence(incident), [incident]);
+  const bundle = useIncidentBundle();
+  const drawer = useEvidenceDrawer();
+  const top = topHypothesis(bundle?.diagnosis ?? undefined);
+  const [filter, setFilter] = useState<EvidenceRole | 'all'>('all');
+  const shown = (data ?? []).filter((e) => filter === 'all' || evidenceRole(e.evidence_id, top) === filter);
   useLiveReload(reload, (e) => e.incident_id === incident);
   const focusRef = useRef<HTMLTableRowElement | null>(null);
   useEffect(() => {
@@ -41,7 +54,21 @@ export function EvidenceTab({ incident, focus }: { incident: string; focus?: str
   return (
     <section aria-label="Evidence">
       <ErrorNote error={error} what="Evidence" />
-      {loading && !data ? <Loading what="evidence" /> : null}
+      {loading && !data ? <Skeleton label="evidence" lines={4} /> : null}
+      {data && data.length > 0 ? (
+        <>
+          <div className="row" role="group" aria-label="Filter evidence by role">
+            {ROLE_FILTERS.map((f) => <button key={f.id} type="button" className={filter === f.id ? '' : 'ghost'} aria-pressed={filter === f.id} onClick={() => setFilter(f.id)}>{f.label}</button>)}
+            <span className="muted">{shown.length} of {data.length}{top ? ` · roles relative to the top hypothesis (${top.cause_id})` : ' · no hypothesis yet, so every item is context'}</span>
+          </div>
+          <div className="stack stack--tight evgrid" data-testid="evidence-cards">
+            {shown.length === 0 ? <EmptyState title="Nothing in this group">No collected evidence has this role for the top hypothesis.</EmptyState> : shown.map((e) => (
+              <EvidenceCard key={e.evidence_id} e={e} role={evidenceRole(e.evidence_id, top)} onOpen={(id) => (drawer ? drawer.open(id) : undefined)} />
+            ))}
+          </div>
+          <h2>All fields</h2>
+        </>
+      ) : null}
       <p className="muted">Every value below is displayed as escaped plain text. Rows marked <Tag kind="untrusted">UNTRUSTED</Tag> contain text from monitored systems (for example log lines) that may be hostile; it is never interpreted.</p>
       <table className="table evidence">
         <thead><tr><th>ID</th><th>Source / type</th><th>Service</th><th>Status</th><th>Observed</th><th>Collected</th><th>Query</th><th>Summary</th><th>Payload</th><th>Hash</th></tr></thead>

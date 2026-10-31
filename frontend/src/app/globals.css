@@ -235,3 +235,31 @@ textarea { width: 100%; display: block; margin-top: 4px; }
 .finding { background: var(--surface-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-panel); padding: var(--space-4); display: grid; gap: var(--space-3); }
 .finding__title { margin: 0; font-size: 18px; }
 .git__sha { color: var(--accent); }
+
+/* ---------- overview, queue, automation ---------- */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-2); margin: var(--space-3) 0 var(--space-2); }
+.tile { display: grid; gap: 2px; padding: var(--space-3); border: 1px solid var(--border-subtle); border-left: 4px solid var(--border-strong); border-radius: var(--radius-panel); background: var(--surface-panel); }
+.tile[data-tone='bad'] { border-left-color: var(--status-bad); } .tile[data-tone='warn'] { border-left-color: var(--status-warn); } .tile[data-tone='ok'] { border-left-color: var(--status-ok); }
+.tile__value { font-size: 26px; font-weight: 700; line-height: 1.1; } .tile__label { color: var(--text-muted); font-size: var(--text-meta); text-transform: uppercase; letter-spacing: 0.05em; }
+.attn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: var(--space-3); }
+.attn { display: grid; gap: var(--space-2); background: var(--surface-panel); border: 1px solid var(--border-subtle); border-left: 5px solid var(--border-strong); border-radius: var(--radius-panel); padding: var(--space-3) var(--space-4); }
+.attn[data-severity='critical'], .attn[data-severity='high'] { border-left-color: var(--status-bad); box-shadow: 0 0 0 1px var(--status-bad-surface); } .attn[data-severity='medium'] { border-left-color: var(--status-warn); }
+.attn__title { margin: 0; font-size: 15px; } .attn__link { font-weight: 600; }
+.queue td { vertical-align: middle; }
+.policy__list { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; } .policy__list li span[aria-hidden='true'] { display: inline-block; width: 1.3em; font-weight: 700; }
+.policy__blocked { display: flex; gap: 8px; align-items: center; padding: var(--space-2); background: var(--status-bad-surface); border: 1px solid var(--status-bad); border-radius: var(--radius-control); margin-bottom: var(--space-2); }
+.etimeline { list-style: none; margin: 0; padding: 0 0 0 var(--space-3); border-left: 2px solid var(--border-strong); display: grid; gap: 4px; }
+.etimeline li[data-tone='ok'] { border-left: 0; color: var(--text-primary); } .etimeline li[data-tone='bad'] { color: var(--status-bad); } .etimeline li[data-tone='warn'] { color: var(--status-warn); }
+.compare { display: grid; gap: 6px; } .compare__row { display: grid; grid-template-columns: minmax(140px, 1fr) repeat(3, minmax(160px, 1fr)); gap: var(--space-3); align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border-subtle); }
+.compare meter { width: 90px; height: 10px; vertical-align: middle; }
+@media (max-width: 1024px) { .compare__row { grid-template-columns: 1fr 1fr; } }
+.checklist { list-style: none; padding: 0; margin: var(--space-2) 0; display: grid; gap: 4px; } .checklist li[data-check='pass'] > span:first-child { color: var(--status-ok); } .checklist li[data-check='fail'] > span:first-child { color: var(--status-bad); }
+.evgrid { margin: var(--space-2) 0; }
+
+/* ---------- topology investigation ---------- */
+.topo-layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: var(--space-4); align-items: start; margin: var(--space-3) 0; }
+@media (max-width: 1100px) { .topo-layout { grid-template-columns: 1fr; } }
+.topo .node { cursor: pointer; } .topo .node:focus-visible rect { stroke-width: 4; } .topo .node.selected rect { stroke-width: 4; fill: var(--accent-surface); }
+.topo .edge-failed { stroke: var(--status-bad); stroke-width: 3; stroke-dasharray: 8 3; }
+.side { background: var(--surface-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-panel); padding: var(--space-3) var(--space-4); }
+.side__title { margin: 0; font-size: var(--text-section); } .side li[data-failed='true'] { color: var(--status-bad); }
