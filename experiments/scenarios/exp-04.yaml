@@ -31,7 +31,7 @@ accepted_remediation:
 max_attempts: 2
 recoverability:
   required_signals:
-    - {id: api_memory_gauge, source: metric, service: api, name: memory_bytes, visibility: unavailable_in_mvp, required: true, supports: cause, description: "memory gauge rising (contracts/telemetry.md defines no memory metric; restarts are visible via process_start_time_seconds)"}
+    - {id: api_memory_gauge, source: metric, service: api, name: process_resident_memory_bytes, visibility: backend_internal, required: true, supports: cause, description: "memory gauge rising (process_resident_memory_bytes exported by the api; restarts also visible via process_start_time_seconds)"}
     - {id: api_container_restart_event, source: event, service: api, name: container_event, visibility: api, required: true, supports: cause, description: "container restart after OOM kill"}
     - {id: api_up, source: metric, service: api, name: up, visibility: api, required: true, supports: cause, description: "availability breach at OOM"}
 variants: {llm: ["off", "on"], log_noise: ["off", "on"]}

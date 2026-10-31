@@ -33,7 +33,7 @@ recoverability:
   required_signals:
     - {id: api_latency_p95, source: metric, service: api, name: latency_p95_seconds, visibility: api, required: true, supports: cause, description: "api p95 latency rises"}
     - {id: api_depends_on_app_db, source: topology, service: api, to: app-db, visibility: api, required: true, supports: cause, description: "dependency edge api->app-db"}
-    - {id: db_query_time_normal, source: metric, service: app-db, name: query_duration, visibility: unavailable_in_mvp, required: true, supports: cause, description: "server-side query duration unchanged, contradicting a slow-DB hypothesis (not in contracts/telemetry.md)"}
-    - {id: api_client_call_duration, source: metric, service: api, name: db_call_duration, visibility: unavailable_in_mvp, required: true, supports: cause, description: "client-side call duration up (not in contracts/telemetry.md)"}
+    - {id: db_query_time_normal, source: metric, service: app-db, name: cd_db_probe_duration_seconds, visibility: backend_internal, required: true, supports: cause, description: "server-side round trip of a probe query measured inside the sandbox network, unchanged: contradicts a slow-database hypothesis"}
+    - {id: api_client_call_duration, source: metric, service: api, name: db_call_duration_seconds, visibility: backend_internal, required: true, supports: cause, description: "client-side database call duration (histogram exported by api and worker) rises"}
 variants: {llm: ["off", "on"], log_noise: ["off", "on"]}
 repetitions: 5

@@ -32,7 +32,7 @@ accepted_remediation:
 max_attempts: 2
 recoverability:
   required_signals:
-    - {id: api_disk_usage, source: metric, service: api, name: disk_usage, visibility: unavailable_in_mvp, required: true, supports: cause, description: "filesystem usage near 100% (no disk metric target in the catalog)"}
+    - {id: api_disk_usage, source: metric, service: api, name: cd_fs_used_bytes, visibility: backend_internal, required: true, supports: cause, description: "filesystem usage of the log volume near 100% (cd_fs_used_bytes / cd_fs_size_bytes, exported by the api)"}
     - {id: api_write_error_logs, source: log, service: api, visibility: api, required: false, supports: cause, description: "no space left on device errors"}
 variants: {llm: ["off", "on"], log_noise: ["off", "on"]}
 repetitions: 3

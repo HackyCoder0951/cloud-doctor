@@ -31,9 +31,9 @@ accepted_remediation:
 max_attempts: 2
 recoverability:
   required_signals:
-    - {id: db_connections_gauge, source: metric, service: app-db, name: connections, visibility: unavailable_in_mvp, required: true, supports: cause, description: "connection gauge near max (contracts/telemetry.md defines no DB connection metric)"}
+    - {id: db_connections_gauge, source: metric, service: app-db, name: cd_db_connections, visibility: backend_internal, required: true, supports: cause, description: "database connection count near cd_db_max_connections (probe sidecar, pg_stat_activity)"}
     - {id: api_too_many_connections_logs, source: log, service: api, visibility: api, required: true, supports: cause, description: "too many connections errors in api logs"}
     - {id: app_db_process_up, source: metric, service: app-db, name: up, visibility: api, required: true, supports: cause, description: "db up=1 contradicts a dependency-down hypothesis"}
-    - {id: per_client_connection_counts, source: metric, service: app-db, name: connections_by_client, visibility: unavailable_in_mvp, required: true, supports: action, description: "per-client connection attribution needed to pick the leaker; not a standard exporter metric"}
+    - {id: per_client_connection_counts, source: metric, service: app-db, name: cd_db_connections_by_client, visibility: backend_internal, required: true, supports: action, description: "per-client connection counts by application_name (probe sidecar); identifies the leaking client"}
 variants: {llm: ["off", "on"], log_noise: ["off", "on"]}
 repetitions: 5
