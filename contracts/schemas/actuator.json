@@ -15,7 +15,7 @@
       "required": ["ok", "rule_ids", "reasons", "invariants_version"],
       "properties": {
         "ok": {"type": "boolean"},
-        "rule_ids": {"type": "array", "items": {"type": "string", "pattern": "^I-[0-9]{2}$"}},
+        "rule_ids": {"type": "array", "items": {"type": "string", "pattern": "^(I-[0-9]{2}|A-[A-Z-]+)$"}},
         "reasons": {"type": "array", "items": {"type": "string"}},
         "invariants_version": {"type": "string"}
       }
