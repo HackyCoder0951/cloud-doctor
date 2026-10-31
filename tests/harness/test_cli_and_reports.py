@@ -28,11 +28,22 @@ def test_validate_scenarios_cli_fails_on_bad_file(tmp_path):
     assert rc == 1 and "FAIL exp-01.yaml" in text
 
 
-def test_check_recoverability_flags_scenarios_with_invisible_causes():
+def test_check_recoverability_reports_collected_but_unobserved_signals():
     rc, text = run_cli(["check-recoverability"])
-    assert rc == 0 and "EXP-01: recoverable" in text and "EXP-03: not_recoverable" in text and "api_cpu_usage" in text
-    assert run_cli(["check-recoverability", "--strict"])[0] == 1
+    assert rc == 0 and "EXP-01: recoverable" in text and "EXP-03: recoverable_unverified" in text and "api_cpu_usage" in text  # collected by the backend, not yet observed in a run
+    assert run_cli(["check-recoverability", "--strict"])[0] == 0  # every shipped scenario now has its signals collected
     assert "pending" in text
+
+
+def test_strict_recoverability_fails_when_a_signal_is_declared_unavailable(tmp_path):
+    import shutil
+
+    from harness.paths import SCENARIO_DIR
+    shutil.copytree(SCENARIO_DIR, tmp_path / "s")
+    p = tmp_path / "s" / "exp-03.yaml"
+    p.write_text(p.read_text().replace("visibility: backend_internal", "visibility: unavailable_in_mvp", 1))
+    rc, text = run_cli(["check-recoverability", "--strict", "--dir", str(tmp_path / "s")])
+    assert rc == 1 and "EXP-03: not_recoverable" in text
 
 
 def test_recoverability_logic():
@@ -88,7 +99,7 @@ def test_report_with_no_runs_is_all_pending(tmp_path):
         assert f"## {heading}" in md
     assert md.count(PENDING_SENTENCE) >= 3
     assert "N=" not in md and "median" not in md.split("## Results")[1].split("## Analysis")[0]
-    assert "pending" in (day / "exp-03.md").read_text() and "not_recoverable" in (day / "exp-03.md").read_text()
+    assert "pending" in (day / "exp-03.md").read_text() and "recoverable_unverified" in (day / "exp-03.md").read_text()
 
 
 def test_report_from_recorded_runs_only_contains_recorded_values(tmp_path):
