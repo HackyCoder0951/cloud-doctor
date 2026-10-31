@@ -57,6 +57,13 @@ class Builder:
         self.put("api", "build_version", "v1")
         self.put("api", "memory_bytes", lambda t: 120e6 + _noise(int(t), 2e6))
         self.put("api", "cpu_cores", lambda t: 0.2 + _noise(int(t), 0.04))
+        self.put("app-db", "db_probe_seconds", lambda t: 0.001 + abs(_noise(int(t), 0.0005)))
+        for svc in ("api", "worker"):
+            self.put(svc, "db_call_p95", lambda t: 0.03 + abs(_noise(int(t), 0.005)))
+        self.put("api", "fs_used_ratio", lambda t: 0.55 + abs(_noise(int(t), 0.002)))
+        self.put("app-db", "db_connections", lambda t: 3 + abs(_noise(int(t), 1)))
+        self.put("app-db", "db_max_connections", 100)
+        self.put("app-db", "db_connections_by_client", {"api": 2, "worker": 1})
         self.put("worker", "queue_depth", lambda t: 3 + _noise(int(t), 3))
         self.put("worker", "memory_bytes", lambda t: 80e6 + _noise(int(t), 2e6))
         for svc in ("api", "worker"):
@@ -203,11 +210,35 @@ def db_saturation() -> dict:
     T = 60
     b.put("api", "dependency_up:app-db", 0, T + 8)
     b.put("worker", "dependency_up:app-db", 0, T + 8)
+    # measured on the sandbox (N=1): a client holding connections shows up in cd_db_connections_by_client under its application_name
+    b.put("app-db", "db_connections", ramp(T, T + 8, 3, 100), T)
+    b.put("app-db", "db_connections_by_client", lambda t: {"connection_hog": 94, "api": 4, "worker": 2} if t >= T + 8 else {"connection_hog": round(ramp(T, T + 8, 0, 94)(t)), "api": 2, "worker": 1}, T)
     b.put("api", "error_ratio", ramp(T + 5, T + 15, 0.004, 0.62), T + 5)
     b.put("api", "latency_p95", ramp(T + 5, T + 15, 0.08, 0.9), T + 5)
     for t in range(T + 8, 300, 4):
         b.log(t, "api", "error", "database query failed", error="FATAL: sorry, too many clients already")
         b.log(t + 1, "worker", "error", "database query failed", error="FATAL: sorry, too many clients already")
+    return b.build()
+
+
+def network_latency() -> dict:
+    """EXP-06: latency injected on the api/worker -> app-db path. Client-side call time rises; the database answers its own probe quickly."""
+    b = Builder("network_latency", "added latency between the application and app-db at t=60s; the database itself is healthy")
+    T = 60
+    for svc in ("api", "worker"):
+        b.put(svc, "db_call_p95", ramp(T, T + 10, 0.03, 1.2), T)
+    b.put("api", "latency_p95", ramp(T + 2, T + 12, 0.08, 1.5), T + 2)
+    return b.build()
+
+
+def disk_full() -> dict:
+    """EXP-11 (draft): the log volume fills; the api starts failing writes."""
+    b = Builder("disk_full", "the filesystem used by the api reaches 100% at t=60s")
+    T = 60
+    b.put("api", "fs_used_ratio", ramp(T - 10, T, 0.55, 1.0), T - 10)
+    b.put("api", "error_ratio", ramp(T + 5, T + 15, 0.004, 0.5), T + 5)
+    for t in range(T + 5, 300, 4):
+        b.log(t, "api", "error", "write failed", error="OSError: [Errno 28] No space left on device")
     return b.build()
 
 
@@ -282,7 +313,7 @@ def restart_before_recovery() -> dict:
 
 ALL = {f.__name__: f for f in (control, redis_outage, worker_crash, memory_exhaustion, bad_deployment, false_correlation, db_saturation,
                                flapping, low_traffic, telemetry_outage, redis_outage_telemetry_failure, expected_down, telemetry_gap,
-                               concurrent_unrelated, restart_before_recovery)}
+                               concurrent_unrelated, restart_before_recovery, network_latency, disk_full)}
 
 
 def recovered_redis() -> dict:

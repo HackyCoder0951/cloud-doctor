@@ -104,7 +104,24 @@ def test_db_saturation_is_exhaustion_not_down(world, catalog, cfg):
     assert (not down) or (down[0].status == "refuted" and down[0].contradicting)
     assert any("app_db_unavailable" in a for a in t.alternatives)
     assert d.recommended_action.action_id == "escalate"  # restarting a database is never allowed
-    assert any("connection counts" in u for u in t.unknowns)
+    # connection counts are measured (cd_db_connections, harness-4), so saturation is a cited observation and the leaker is named
+    assert any("of 100 allowed connections" in c.text for c in t.claims)
+    assert any("'connection_hog'" in c.text and "likely leaker" in c.text for c in t.claims)
+    assert not any("leaking client is not identified" in u for u in t.unknowns)
+
+
+def test_db_saturation_without_connection_series_keeps_the_unknowns(world, catalog, cfg):
+    import copy
+
+    from fixtures import scenarios
+    data = copy.deepcopy(scenarios.ALL["db_saturation"]())
+    for metric in ("db_connections", "db_max_connections", "db_connections_by_client"):
+        data["samples"]["app-db"].pop(metric, None)
+    d, _, _ = diagnose(world, catalog, cfg, data, 150)
+    t = top(d)
+    assert t.cause_id == "app_db_connection_exhaustion"
+    assert any("connection saturation is not measured" in u for u in t.unknowns)
+    assert any("leaking client is not identified" in u for u in t.unknowns)
 
 
 def test_restart_before_recovery_is_never_a_cause(world, catalog, cfg):
@@ -144,3 +161,32 @@ def test_bad_deployment_without_change_feed_uses_build_info_history(world, catal
     assert t.cause_id == "api_bad_deployment"
     assert d.recommended_action.action_id == "rollback_service" and d.recommended_action.params == {"service": "api", "version": "v1"}
     assert t.confidence < 0.95  # fewer independent signals than with the deploy event
+
+
+def test_network_latency_is_the_path_not_the_database(world, catalog, cfg):
+    d, _, _ = diagnose(world, catalog, cfg, "network_latency", 150)
+    t = top(d)
+    assert t.cause_id == "app_db_network_latency" and t.status == "supported"
+    assert any("database is not slow" in c.text for c in t.claims)  # server-side probe time normal
+    assert any("inferred by exclusion" in u for u in t.unknowns)  # the path itself is not measured
+    assert d.recommended_action.action_id == "escalate"  # no safe catalogue action for a network fault
+
+
+def test_slow_database_is_not_called_network_latency(world, catalog, cfg):
+    import copy
+
+    from fixtures import scenarios
+    data = copy.deepcopy(scenarios.ALL["network_latency"]())
+    data["samples"]["app-db"]["db_probe_seconds"] = [[t, 0.9] for t in range(0, 301, 5)]  # the database itself is slow
+    d, _, _ = diagnose(world, catalog, cfg, data, 150)
+    t = top(d)
+    assert t.cause_id != "app_db_network_latency" or any("answers slowly" in c.text for c in t.contradicting)
+
+
+def test_disk_full_is_diagnosed_and_not_restarted(world, catalog, cfg):
+    d, _, _ = diagnose(world, catalog, cfg, "disk_full", 150)
+    t = top(d)
+    assert t.cause_id == "api_disk_full"
+    assert any("filesystem usage is 100%" in c.text for c in t.claims)
+    assert any("not identified" in u for u in t.unknowns)  # the volume is shared, the filler is unknown
+    assert d.recommended_action.action_id == "escalate"  # restarting does not free the disk
