@@ -27,6 +27,7 @@ class Service:
 class Catalog:
     services: dict[str, Service] = field(default_factory=dict)
     sandbox_label: str = "cloud-doctor.sandbox=true"
+    source: str | None = None  # file this catalog was loaded from (the real invariants package loads its own copy)
 
     @classmethod
     def load(cls, path: str | os.PathLike | None = None) -> Catalog:
@@ -34,7 +35,7 @@ class Catalog:
         if not p.is_absolute() and not p.exists():
             p = REPO_ROOT / p
         doc = yaml.safe_load(p.read_text())
-        cat = cls(sandbox_label=doc.get("sandbox_label", "cloud-doctor.sandbox=true"))
+        cat = cls(sandbox_label=doc.get("sandbox_label", "cloud-doctor.sandbox=true"), source=str(p))
         for s in doc["services"]:
             slo = s.get("slo") or {}
             cat.services[s["name"]] = Service(
