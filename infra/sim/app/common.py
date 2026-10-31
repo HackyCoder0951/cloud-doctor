@@ -8,7 +8,8 @@ import threading
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+from prometheus_client import CONTENT_TYPE_LATEST, REGISTRY, generate_latest
+from prometheus_client.core import GaugeMetricFamily
 
 SERVICE = os.environ.get("SERVICE_NAME", "unknown")
 _LOG_FILE = os.environ.get("LOG_FILE")
@@ -58,6 +59,28 @@ def serve(port, routes, daemon=False):
     if not daemon:
         thread.join()
     return server
+
+
+class _FsCollector:
+    """Filesystem size and usage of the shared log volume, read at scrape time (statvfs)."""
+
+    def __init__(self, mount):
+        self.mount = mount
+
+    def collect(self):
+        try:
+            st = os.statvfs(self.mount)
+        except OSError:
+            return  # series absent if the mount cannot be read
+        size, free = st.f_blocks * st.f_frsize, st.f_bavail * st.f_frsize
+        for name, doc, val in (("cd_fs_size_bytes", "Filesystem size", size), ("cd_fs_used_bytes", "Filesystem bytes in use", size - free)):
+            g = GaugeMetricFamily(name, doc, labels=["mount"])
+            g.add_metric([self.mount], float(val))
+            yield g
+
+
+def register_fs_metrics(mount="/logs"):
+    REGISTRY.register(_FsCollector(mount))
 
 
 def metrics_route(_query=""):
