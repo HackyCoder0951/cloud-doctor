@@ -9,7 +9,7 @@ Date of last run: 2026-10-30. Everything below marked "run" was run in this sess
 | `invariants/` (Layer 1 I-01..I-08, signing, catalogue, `compose_decision`) | **Done**, tested |
 | `actuator/` (unix-socket server, signature/expiry/nonce/hash/approval checks, Layer 1 re-run, idempotency, `docker restart` via injectable runner, hash-chained NDJSON audit, `python -m actuator`, test client) | **Done**, tested with a fake runner. Never run against a real Docker daemon |
 | `policy/` Layer 2 (fail-closed OPA client, minimised input, glue to composition) | **Done**, tested with a Python OPA double and a loopback fake OPA |
-| `policy/rego/` (default deny; freeze window, per-service allowlist, cache-restart approval, confidence threshold) and `policy_test.rego` | **Written, NOT executed**: no `opa` binary in this environment (and I did not download one), so neither `opa test` nor `opa check` has run and the Rego may contain syntax or semantic errors |
+| `policy/rego/` (default deny; freeze window, per-service allowlist, cache-restart approval, confidence threshold) and `policy_test.rego` | **Executed by the coordinator (2026-10-31)**: `opa check policy/rego` exit 0 and `opa test policy/rego` PASS 13/13 on OPA 1.22.0 (official `openpolicyagent/opa:latest-static` image, digest `sha256:2e5f84895445ca479be9eb1f2473c904a447b5ec53e6a487e0fcb3193d651ed8`), run through Docker because the vendor host is blocked by the cloud egress policy. The two `tests/policy` OPA tests then pass (108 passed, 0 skipped). Not run: a live OPA server with a signed bundle (B4 bundle checks), and the Rego was only tested with its own inputs |
 | `docs/dev/policy/INTEGRATION.md` | Done |
 | Postgres audit sink (`CD_AUDIT_SINK=postgres`) | **Not started**: the actuator refuses to start with it; NDJSON file only |
 
@@ -22,7 +22,7 @@ python3 -m pytest tests/invariants tests/actuator tests/policy -q
 python3 tests/contract/validate_contracts.py
 ```
 
-Result of the last run: `318 passed, 2 skipped` (the 2 skipped are the `opa test` / `opa check` tests, skipped because `opa` is not installed);
+Result of the last run: `318 passed, 2 skipped` (the 2 skipped are the `opa test` / `opa check` tests, skipped because `opa` was not installed in that session; the coordinator later ran them with OPA 1.22.0 and they pass);
 contract validator `RESULT: PASS (0 failures)`. Tests need no Docker, no external network and no OPA. Two test modules use loopback only
 (a fake OPA HTTP server on 127.0.0.1, and unix sockets for the actuator server); they skip if binding fails.
 
@@ -53,7 +53,7 @@ contract validator `RESULT: PASS (0 failures)`. Tests need no Docker, no externa
 * The subprocess environment is reduced to `PATH`, so a daemon reachable only through `DOCKER_HOST` or a non-default context will not work until Stream A / the coordinator decides how the actuator reaches the sandbox daemon.
 * The label check and the restart are separate Docker calls (small time-of-check/time-of-use window).
 * Layer 2 bundle signature state is not verified by the client: `OpaHealthEndpoint` reads `GET /health?bundles` only and takes "signed" from operator configuration. The OPA endpoint semantics were not verified against the full docs, and staleness uses the `last_activated` value the health implementation supplies.
-* The Rego was never executed (see above). The decision path `cloud_doctor/policy/decision` is this stream's choice.
+* The Rego was first executed by the coordinator after this stream ended (see above). The decision path `cloud_doctor/policy/decision` is this stream's choice.
 * Audit is a local file; there is no external anchoring, so someone with write access to the file and the ability to recompute hashes can rewrite the whole chain (the chain detects partial edits, deletions and reordering). A torn or tampered file makes the actuator refuse to start.
 * Single-threaded server: a slow client can delay others up to the 10 s socket timeout.
 * No load, fuzz or property-based testing beyond the parametrised adversarial cases; no measured numbers are claimed.
