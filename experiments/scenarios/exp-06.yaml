@@ -1,0 +1,39 @@
+# Thresholds, timings and N are PROVISIONAL design values (nothing here is measured).
+# ground_truth/fault/accepted_remediation are HARNESS-ONLY: never sent to the Cloud Doctor API.
+schema_version: 1
+id: EXP-06
+status: designed
+title: "Network latency on the api to app-db link"
+objective: "Test detection and diagnosis of latency without hard failures, where restarts are useless; the expected outcome is escalation with a clear diagnosis. Requires a Toxiproxy proxy on the api to app-db path (assumption on infra)."
+design_doc: docs/11-experiments/network-failure.md
+is_control: false
+targets: [app-db]
+affected_services: [api]
+fault:
+  type: latency_toxic
+  target: app-db
+  params: {proxy: api-app-db, latency_ms: 300, jitter_ms: 50, stream: downstream}
+  persistent: false
+timing: {baseline_seconds: 60, baseline_timeout_seconds: 300, max_duration_seconds: 600, detection_deadline_seconds: 120, poll_seconds: 2, settle_seconds: 30}
+abort: {max_unhealthy_services: 2, max_action_services: 1, max_executions: 2}
+steady_state:
+  - {service: api, sli: error_ratio, op: "<=", threshold: 0.01}
+  - {service: api, sli: latency_p95_seconds, op: "<=", threshold: 0.5}
+  - {service: worker, sli: queue_depth, op: "<=", threshold: 100}
+ground_truth:
+  cause_equivalence_class: [network_latency_app_db, db_link_latency]
+  cause_service: app-db
+  decoy_causes: []
+accepted_remediation:
+  outcome: escalated
+  actions:
+    - {action_id: escalate, service: api}
+max_attempts: 2
+recoverability:
+  required_signals:
+    - {id: api_latency_p95, source: metric, service: api, name: latency_p95_seconds, visibility: api, required: true, supports: cause, description: "api p95 latency rises"}
+    - {id: api_depends_on_app_db, source: topology, service: api, to: app-db, visibility: api, required: true, supports: cause, description: "dependency edge api->app-db"}
+    - {id: db_query_time_normal, source: metric, service: app-db, name: query_duration, visibility: unavailable_in_mvp, required: true, supports: cause, description: "server-side query duration unchanged, contradicting a slow-DB hypothesis (not in contracts/telemetry.md)"}
+    - {id: api_client_call_duration, source: metric, service: api, name: db_call_duration, visibility: unavailable_in_mvp, required: true, supports: cause, description: "client-side call duration up (not in contracts/telemetry.md)"}
+variants: {llm: ["off", "on"], log_noise: ["off", "on"]}
+repetitions: 5

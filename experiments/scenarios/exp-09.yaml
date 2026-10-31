@@ -1,0 +1,46 @@
+# Thresholds, timings and N are PROVISIONAL design values (nothing here is measured).
+# ground_truth/fault/accepted_remediation are HARNESS-ONLY: never sent to the Cloud Doctor API.
+schema_version: 1
+id: EXP-09
+status: designed
+title: "False correlation"
+objective: "Test whether the system avoids 'A happened before B, so A caused B': a healthy worker deployment occurs shortly before a real CPU saturation in api; the decoy must not be ranked first."
+design_doc: docs/11-experiments/false-correlation.md
+is_control: false
+targets: [api, worker]
+affected_services: [api]
+fault:
+  type: cpu_hog
+  target: api
+  params: {duration_seconds: 300}
+  persistent: false
+decoy:
+  lead_seconds: 20
+  fault:
+    type: benign_deployment
+    target: worker
+    params: {service: worker, new_tag: v-next-healthy, previous_tag: v1}
+    persistent: false
+timing: {baseline_seconds: 60, baseline_timeout_seconds: 300, max_duration_seconds: 900, detection_deadline_seconds: 240, poll_seconds: 2, settle_seconds: 30}
+abort: {max_unhealthy_services: 3, max_action_services: 1, max_executions: 3}
+steady_state:
+  - {service: api, sli: error_ratio, op: "<=", threshold: 0.01}
+  - {service: api, sli: latency_p95_seconds, op: "<=", threshold: 0.5}
+  - {service: worker, sli: queue_depth, op: "<=", threshold: 100}
+ground_truth:
+  cause_equivalence_class: [api_cpu_saturation, cpu_saturation]
+  cause_service: api
+  decoy_causes: [bad_deployment, worker_bad_deployment]
+accepted_remediation:
+  outcome: mitigated
+  actions:
+    - {action_id: restart_service, service: api}
+max_attempts: 2
+recoverability:
+  required_signals:
+    - {id: api_latency_p95, source: metric, service: api, name: latency_p95_seconds, visibility: api, required: true, supports: cause, description: "p95 latency rises"}
+    - {id: api_cpu_usage, source: metric, service: api, name: cpu_usage, visibility: unavailable_in_mvp, required: true, supports: cause, description: "CPU usage near limit (contracts/telemetry.md defines no CPU metric)"}
+    - {id: worker_deploy_event, source: event, service: worker, name: deploy_event, visibility: api, required: false, supports: cause, description: "decoy deploy event on worker (must be listed with contradicting evidence)"}
+    - {id: worker_healthy, source: metric, service: worker, name: error_ratio, visibility: api, required: true, supports: cause, description: "worker metrics healthy, contradicting the decoy"}
+variants: {llm: ["off", "on"], log_noise: ["off", "on"]}
+repetitions: 5

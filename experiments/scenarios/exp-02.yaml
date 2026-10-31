@@ -1,0 +1,38 @@
+# Thresholds, timings and N are PROVISIONAL design values (nothing here is measured).
+# ground_truth/fault/accepted_remediation are HARNESS-ONLY: never sent to the Cloud Doctor API.
+schema_version: 1
+id: EXP-02
+status: designed
+title: "Worker crash"
+objective: "Verify detection and bounded recovery of a crashed background worker whose symptom (queue backlog) is indirect; API SLIs stay healthy."
+design_doc: docs/11-experiments/worker-failure.md
+is_control: false
+targets: [worker]
+affected_services: [worker]
+fault:
+  type: container_kill
+  target: worker
+  params: {}
+  persistent: false
+timing: {baseline_seconds: 60, baseline_timeout_seconds: 300, max_duration_seconds: 600, detection_deadline_seconds: 120, poll_seconds: 2, settle_seconds: 30}
+abort: {max_unhealthy_services: 2, max_action_services: 1, max_executions: 3}
+steady_state:
+  - {service: api, sli: error_ratio, op: "<=", threshold: 0.01}
+  - {service: api, sli: latency_p95_seconds, op: "<=", threshold: 0.5}
+  - {service: worker, sli: queue_depth, op: "<=", threshold: 100}
+ground_truth:
+  cause_equivalence_class: [worker_unavailable, worker_process_exit]
+  cause_service: worker
+  decoy_causes: []
+accepted_remediation:
+  outcome: mitigated
+  actions:
+    - {action_id: restart_service, service: worker}
+max_attempts: 2
+recoverability:
+  required_signals:
+    - {id: worker_target_down, source: metric, service: worker, name: up, visibility: api, required: true, supports: cause, description: "worker up=0"}
+    - {id: worker_queue_depth, source: metric, service: worker, name: queue_depth, visibility: api, required: true, supports: cause, description: "queue depth rising"}
+    - {id: worker_container_event, source: event, service: worker, name: container_event, visibility: api, required: false, supports: cause, description: "container exited event"}
+variants: {llm: ["off", "on"], log_noise: ["off", "on"]}
+repetitions: 5

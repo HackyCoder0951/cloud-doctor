@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cloud-doctor-harness"
+version = "0.1.0"
+description = "Cloud Doctor experiment harness (Stream F): fault injection, run protocol, ground truth, metrics."
+requires-python = ">=3.12"
+dependencies = [
+  "pyyaml==6.0.3",
+  "jsonschema==4.26.0",
+]
+
+[project.optional-dependencies]
+test = ["pytest==9.2.0"]
+
+# The package directory is this directory: `python -m harness` works from the repo root.
+[tool.setuptools]
+packages = ["harness"]
+package-dir = {"harness" = "."}
+include-package-data = true
+
+[tool.setuptools.package-data]
+harness = ["schemas/*.json"]

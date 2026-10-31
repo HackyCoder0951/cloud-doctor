@@ -1,0 +1,38 @@
+# Thresholds, timings and N are PROVISIONAL design values (nothing here is measured).
+# ground_truth/fault/accepted_remediation are HARNESS-ONLY: never sent to the Cloud Doctor API.
+schema_version: 1
+id: EXP-04
+status: designed
+title: "Memory exhaustion"
+objective: "Test gradual detection and recognition that a restart is only a temporary mitigation (recurrence, loop guard, escalation)."
+design_doc: docs/11-experiments/memory-failure.md
+is_control: false
+targets: [api]
+affected_services: [api]
+fault:
+  type: memory_hog
+  target: api
+  params: {mb_per_second: 8, max_mb: 1024, duration_seconds: 600}
+  persistent: false
+timing: {baseline_seconds: 60, baseline_timeout_seconds: 300, max_duration_seconds: 1200, detection_deadline_seconds: 600, poll_seconds: 2, settle_seconds: 60}
+abort: {max_unhealthy_services: 2, max_action_services: 1, max_executions: 3}
+steady_state:
+  - {service: api, sli: error_ratio, op: "<=", threshold: 0.01}
+  - {service: api, sli: latency_p95_seconds, op: "<=", threshold: 0.5}
+  - {service: worker, sli: queue_depth, op: "<=", threshold: 100}
+ground_truth:
+  cause_equivalence_class: [api_memory_exhaustion, memory_exhaustion]
+  cause_service: api
+  decoy_causes: []
+accepted_remediation:
+  outcome: either
+  actions:
+    - {action_id: restart_service, service: api}
+max_attempts: 2
+recoverability:
+  required_signals:
+    - {id: api_memory_gauge, source: metric, service: api, name: memory_bytes, visibility: unavailable_in_mvp, required: true, supports: cause, description: "memory gauge rising (contracts/telemetry.md defines no memory metric; restarts are visible via process_start_time_seconds)"}
+    - {id: api_container_restart_event, source: event, service: api, name: container_event, visibility: api, required: true, supports: cause, description: "container restart after OOM kill"}
+    - {id: api_up, source: metric, service: api, name: up, visibility: api, required: true, supports: cause, description: "availability breach at OOM"}
+variants: {llm: ["off", "on"], log_noise: ["off", "on"]}
+repetitions: 5
