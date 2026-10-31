@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from helpers import run_detector
 from stack import KEY
 
+from backend import policy_adapter as pa
 from backend.api.app import Settings, create_app
 from backend.domain.clock import FakeClock
 from backend.domain.contracts import validate_against_contract
@@ -202,6 +203,7 @@ def test_error_bodies_do_not_leak_internals(world, catalog, cfg, token_file):
     assert "traceback" not in nf.text.lower()
 
 
+@pytest.mark.skipif(pa.IS_REAL, reason="asserts the 'LOCAL STUB' status text")
 def test_status_reports_degraded_and_fail_closed(world, catalog, cfg, token_file):
     c, svc, w = make_client(world, catalog, cfg)
     s = c.get("/api/v1/status")  # no auth needed

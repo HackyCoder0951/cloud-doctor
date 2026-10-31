@@ -32,6 +32,7 @@ def ctx(catalog, **kw):
     return pa.make_context(**base)
 
 
+@pytest.mark.skipif(pa.IS_REAL, reason="asserts the local stub; the real package is covered by tests/invariants")
 def test_adapter_uses_stub_and_says_so():
     assert pa.IS_REAL is False and pa.VERSION.startswith("inv-stub")
     assert "STUB" in pa.__doc__
@@ -42,6 +43,7 @@ def test_stub_allows_a_clean_low_risk_restart(catalog):
     assert (r.final, r.rule_ids) == ("allow", [])
 
 
+@pytest.mark.skipif(pa.IS_REAL, reason="asserts the local stub; the real package is covered by tests/invariants")
 @pytest.mark.parametrize("name,plan_kw,ctx_kw,rule", [
     ("unknown action", dict(action="run_shell"), {}, "I-01"),
     ("extra param", dict(params={"service": "worker", "cmd": "rm -rf /"}), {}, "I-01"),
@@ -67,6 +69,7 @@ def test_stub_tampered_plan_hash_is_denied(catalog):
     assert "I-01" in pa.evaluate(p, ctx(catalog)).rule_ids
 
 
+@pytest.mark.skipif(pa.IS_REAL, reason="asserts the local stub; the real package is covered by tests/invariants")
 def test_stub_medium_needs_bound_approval(catalog):
     p = mkplan(params={"service": "redis"}, risk="medium")
     c = ctx(catalog, top_cause_service="redis")
