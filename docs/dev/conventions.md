@@ -72,6 +72,8 @@ Raw data from a service is never read by anything downstream. It is converted on
 - **Data in the template** uses the contract's field names (`incident_id`, `opened_at`, `top_cause`, `cause_id`, `evidence_ids`, `health_state`) and lower snake_case enum values. Only `health_state` is upper-case (`HEALTHY` …), as the frozen contract has it. Roles and permissions are lower snake_case ids (`viewer`, `decide_plans`).
 - **Code in the template** is camelCase (`renderIncidentDetail`, `ui.pendingDecision`); render functions are `renderX`; one handler per `data-action` value in a single `actions` map keyed by the kebab-case name.
 - **Tone mapping** is in one place (`healthTone`): `HEALTHY→ok`, `DEGRADED→warn`, `UNHEALTHY→bad`, `UNKNOWN→unknown`. A status is always shown with a shape as well as a colour.
+- **Layout** is the incident command centre: sidebar, top bar (environment, live, time range, search, notifications, account), then the active incident banner with the 11-step pipeline, KPI cards, timeline and topology, evidence, safe remediation, recovery verification, report, and the Incident Commander panel. Panel ids used for navigation: `section-evidence`, `section-remediation`, `section-report`, `commander`.
+- **Status colours follow meaning, not direction**: a rising latency or a falling availability is `bad` even though the arrow points up or down.
 - **Checked** by an audit of the template: 0 inline `style` attributes, 0 emoji, every class defined in the CSS and matching `block__element--modifier` in kebab-case.
 
 ## 6. Decisions and open points

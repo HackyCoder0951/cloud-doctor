@@ -1,135 +1,272 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Cloud Doctor Console</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-/* Conventions: docs/dev/conventions.md.
-   Tokens are --group-name by role. Classes are block, block__element, block--modifier (kebab-case).
-   State and tone live in data attributes: data-tone, data-state, data-selected. No inline styles anywhere.
-   Layout: sticky top bar, content column (max 1360), incident page = main column + sticky decision rail. */
+/* Conventions: docs/dev/conventions.md. Tokens are --group-name by role; classes are block__element--modifier;
+   state and tone live in data attributes (data-tone, data-state, data-checked); no inline styles.
+   Layout: sidebar | (top bar, then workspace = incident column + Incident Commander panel). Dark navy first, light theme too. */
 :root {
-  --surface-page:#0c1014; --surface-chrome:#111820; --surface-panel:#151d26; --surface-raised:#1a242f;
-  --border-subtle:#263340; --border-strong:#33434f;
-  --text-primary:#e7edf3; --text-muted:#8fa0b0; --text-faint:#5f7080;
-  --accent:#8da7ff; --accent-surface:#1b2442; --accent-contrast:#0c1014;
-  --status-ok:#4fd18b; --status-ok-surface:#12281f; --status-warn:#f0b64a; --status-warn-surface:#2d2411;
-  --status-bad:#ff7a70; --status-bad-surface:#33171a; --status-unknown:#a5b2bf; --status-unknown-surface:#222c36;
-  --shadow-popover:0 8px 28px rgba(0,0,0,.35);
+  --surface-page:#070b14; --surface-chrome:#0a101c; --surface-panel:#0d1424; --surface-raised:#131c31;
+  --border-subtle:#1b2640; --border-strong:#2a3858;
+  --text-primary:#e8edf7; --text-muted:#93a1ba; --text-faint:#5c6b86;
+  --accent:#7f8fff; --accent-surface:#1a2150; --accent-contrast:#070b14;
+  --status-ok:#3ddc97; --status-ok-surface:#0f2a24; --status-warn:#f5b942; --status-warn-surface:#2c2410;
+  --status-bad:#ff6b6b; --status-bad-surface:#2e1519; --status-unknown:#9aa7bd; --status-unknown-surface:#1c2538;
+  --shadow-popover:0 10px 32px rgba(0,0,0,.45); --shadow-alert:0 0 28px rgba(255,107,107,.16);
   --font-display:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif; --font-body:'Onest','Segoe UI',system-ui,sans-serif; --font-mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
   --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:24px; --radius-panel:12px; --radius-control:8px;
   color-scheme:dark;
 }
 @media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
-  --surface-page:#f3f6f9; --surface-chrome:#ffffff; --surface-panel:#ffffff; --surface-raised:#eef2f6;
-  --border-subtle:#d8e0e8; --border-strong:#c3cfda; --text-primary:#16212b; --text-muted:#566677; --text-faint:#8696a6;
-  --accent:#3a55c8; --accent-surface:#e4e9fb; --accent-contrast:#ffffff;
-  --status-ok:#17803f; --status-ok-surface:#dff4e7; --status-warn:#8a5a00; --status-warn-surface:#fff0cc;
-  --status-bad:#b42318; --status-bad-surface:#fde4e1; --status-unknown:#4a5866; --status-unknown-surface:#e8edf2;
-  --shadow-popover:0 8px 24px rgba(30,50,70,.12); color-scheme:light;}}
+  --surface-page:#eef2f8; --surface-chrome:#ffffff; --surface-panel:#ffffff; --surface-raised:#f1f4fa;
+  --border-subtle:#d6deec; --border-strong:#bfcbe0; --text-primary:#121a2b; --text-muted:#52607a; --text-faint:#8493ad;
+  --accent:#3f51d1; --accent-surface:#e5e8fb; --accent-contrast:#ffffff;
+  --status-ok:#12803f; --status-ok-surface:#dff4e7; --status-warn:#8a5a00; --status-warn-surface:#fff0cc;
+  --status-bad:#b42318; --status-bad-surface:#fde4e1; --status-unknown:#4a5870; --status-unknown-surface:#e8edf5;
+  --shadow-popover:0 10px 28px rgba(30,50,90,.16); --shadow-alert:0 0 0 transparent; color-scheme:light;}}
 :root[data-theme="light"]{
-  --surface-page:#f3f6f9; --surface-chrome:#ffffff; --surface-panel:#ffffff; --surface-raised:#eef2f6;
-  --border-subtle:#d8e0e8; --border-strong:#c3cfda; --text-primary:#16212b; --text-muted:#566677; --text-faint:#8696a6;
-  --accent:#3a55c8; --accent-surface:#e4e9fb; --accent-contrast:#ffffff;
-  --status-ok:#17803f; --status-ok-surface:#dff4e7; --status-warn:#8a5a00; --status-warn-surface:#fff0cc;
-  --status-bad:#b42318; --status-bad-surface:#fde4e1; --status-unknown:#4a5866; --status-unknown-surface:#e8edf2;
-  --shadow-popover:0 8px 24px rgba(30,50,70,.12); color-scheme:light;}
+  --surface-page:#eef2f8; --surface-chrome:#ffffff; --surface-panel:#ffffff; --surface-raised:#f1f4fa;
+  --border-subtle:#d6deec; --border-strong:#bfcbe0; --text-primary:#121a2b; --text-muted:#52607a; --text-faint:#8493ad;
+  --accent:#3f51d1; --accent-surface:#e5e8fb; --accent-contrast:#ffffff;
+  --status-ok:#12803f; --status-ok-surface:#dff4e7; --status-warn:#8a5a00; --status-warn-surface:#fff0cc;
+  --status-bad:#b42318; --status-bad-surface:#fde4e1; --status-unknown:#4a5870; --status-unknown-surface:#e8edf5;
+  --shadow-popover:0 10px 28px rgba(30,50,90,.16); --shadow-alert:0 0 0 transparent; color-scheme:light;}
 
 *{box-sizing:border-box}
-body{background:var(--surface-page);color:var(--text-primary);font:14px/1.5 var(--font-body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0}
+body{background:var(--surface-page);color:var(--text-primary);font:13.5px/1.5 var(--font-body);padding-inline:env(safe-area-inset-left,0px) env(safe-area-inset-right,0px);padding-block:0}
 h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
-h1{font-size:26px;line-height:1.15}h2{font-size:16px}h3{font-size:14px;font-family:var(--font-body);font-weight:600}
+h1{font-size:25px;line-height:1.15}h2{font-size:15px}h3{font-size:13.5px;font-family:var(--font-body);font-weight:600}
 p{margin:0}ul,ol,dl{margin:0}a{color:var(--accent)}
 button,input,textarea{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
-.icon{width:1em;height:1em;vertical-align:-.125em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.icon{width:1.15em;height:1.15em;vertical-align:-.2em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
 
-/* layout primitives */
+/* primitives */
 .container{max-width:1360px;margin:0 auto}
 .stack{display:grid;gap:var(--space-3)}.stack--tight{gap:var(--space-2)}
-.cluster{display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center}.cluster--between{justify-content:space-between}
+.cluster{display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center}.cluster--between{justify-content:space-between}.cluster--nowrap{flex-wrap:nowrap}
 .scroll-x{overflow-x:auto}
-.text-muted{color:var(--text-muted)}.text-faint{color:var(--text-faint)}.text-mono{font-family:var(--font-mono);font-size:12.5px}.text-lead{font-size:15px}
-.grid{display:grid;gap:var(--space-4)}.grid--stats{grid-template-columns:repeat(5,minmax(0,1fr))}.grid--cards{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}.grid--halves{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
-.grid--columns{grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px}
-@media (max-width:900px){.grid--stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.layout-split{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
-@media (max-width:980px){.layout-split{grid-template-columns:minmax(0,1fr)}}
-.page{padding-block:24px 64px}
+.text-muted{color:var(--text-muted)}.text-faint{color:var(--text-faint)}.text-mono{font-family:var(--font-mono);font-size:12px}.text-small{font-size:12px}
+.grid{display:grid;gap:var(--space-4)}.grid--cards{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}.grid--halves{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.page{padding:20px 20px 64px;max-width:1360px}
 .page-header{display:flex;gap:var(--space-4);align-items:flex-end;justify-content:space-between;flex-wrap:wrap;margin-bottom:18px}
 .page-header__lead{margin-top:var(--space-1);color:var(--text-muted);max-width:68ch}
-.section-gap{margin-bottom:var(--space-5)}
+.section-gap{margin-bottom:var(--space-5)}.list-plain{padding-left:18px}
+.prototype-note{font-size:12px;color:var(--text-muted);padding-top:10px}
+
+/* app shell */
+.app-shell{display:grid;grid-template-columns:196px minmax(0,1fr);min-height:100vh}
+.app-main{min-width:0}
+.sidebar{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;background:var(--surface-chrome);border-right:1px solid var(--border-subtle);padding:14px 10px}
+.brand{display:flex;gap:10px;align-items:center;padding:4px 8px 16px}
+.brand__mark{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(140deg,var(--accent),var(--status-ok));color:var(--accent-contrast);font-size:18px}
+.brand__name{font:700 15px/1.1 var(--font-display);display:block}.brand__tagline{font-size:10.5px;color:var(--text-muted);line-height:1.25;display:block;margin-top:2px}
+.sidebar__nav{display:grid;gap:2px}
+.sidebar__item{display:flex;gap:11px;align-items:center;width:100%;background:none;border:0;padding:9px 10px;border-radius:9px;color:var(--text-muted);cursor:pointer;text-align:left;font-weight:500}
+.sidebar__item:hover{background:var(--surface-raised);color:var(--text-primary)}
+.sidebar__item[aria-current="page"]{background:var(--accent-surface);color:var(--text-primary)}
+.sidebar__item[aria-current="page"] .icon:first-child{color:var(--accent)}
+.sidebar__label{flex:1}.sidebar__badge{background:var(--status-bad);color:#fff;border-radius:99px;font-size:11px;padding:0 7px;font-weight:600}
+.sidebar__status{margin-top:auto;padding:12px 10px 4px;font-size:12px;border-top:1px solid var(--border-subtle)}
+.sidebar__status-line{display:flex;gap:8px;align-items:center;font-weight:600}
+.status-dot{width:9px;height:9px;border-radius:50%;background:var(--status-ok);flex:none}
+.status-dot[data-tone="bad"]{background:var(--status-bad)}.status-dot[data-tone="warn"]{background:var(--status-warn)}
+@media (max-width:860px){
+  .app-shell{grid-template-columns:minmax(0,1fr)}
+  .sidebar{position:static;height:auto;flex-direction:row;align-items:center;overflow-x:auto;padding:8px;gap:8px;border-right:0;border-bottom:1px solid var(--border-subtle)}
+  .brand{padding:0 8px 0 4px}.brand__tagline,.sidebar__status{display:none}.sidebar__nav{display:flex}.sidebar__item{white-space:nowrap;padding:8px 10px;width:auto}
+}
 
 /* top bar */
-.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface-chrome);border-bottom:1px solid var(--border-subtle);margin-inline:calc(-1*max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px))}
-.topbar__inner{display:flex;align-items:center;gap:18px;min-height:54px;flex-wrap:wrap;padding-block:6px}
-.topbar__tools{display:flex;gap:var(--space-2);align-items:center}
-.brand{font:700 17px var(--font-display);display:flex;gap:9px;align-items:center}
-.brand__mark{width:22px;height:22px;border-radius:7px;background:conic-gradient(from 200deg,var(--accent),var(--status-ok),var(--accent))}
-.main-nav{display:flex;gap:2px;flex:1;flex-wrap:wrap}
-.main-nav__item{background:none;border:0;padding:8px 12px;border-radius:7px;color:var(--text-muted);cursor:pointer;font-weight:500;display:inline-flex;gap:6px;align-items:center}
-.main-nav__item:hover{color:var(--text-primary);background:var(--surface-raised)}.main-nav__item[aria-current="page"]{color:var(--text-primary);background:var(--surface-raised)}
-.main-nav__badge{background:var(--status-bad);color:#fff;border-radius:99px;font-size:11px;padding:0 6px;font-weight:600}
-.chip{display:inline-flex;gap:7px;align-items:center;padding:4px 10px;border-radius:99px;border:1px solid var(--border-strong);background:var(--surface-panel);font-size:12.5px;cursor:pointer}
-.chip--static{cursor:default}
+.topbar{position:sticky;top:0;z-index:20;background:var(--surface-chrome);border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 20px}
+.topbar__label{color:var(--text-muted)}.topbar__spacer{flex:1}
+.chip{display:inline-flex;gap:8px;align-items:center;padding:6px 12px;border-radius:9px;border:1px solid var(--border-strong);background:var(--surface-panel);font-size:13px;cursor:pointer;white-space:nowrap}
+.chip--static{cursor:default}.chip--live{border-color:transparent;background:var(--status-ok-surface);color:var(--status-ok);font-weight:600}
 .live-dot{width:8px;height:8px;border-radius:50%;background:var(--status-ok);animation:live-pulse 2s infinite}
 @keyframes live-pulse{0%{box-shadow:0 0 0 0 var(--status-ok)}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
 @media (prefers-reduced-motion:reduce){.live-dot{animation:none}*{transition:none!important}}
+.search{display:flex;gap:9px;align-items:center;flex:1 1 260px;max-width:460px;border:1px solid var(--border-strong);background:var(--surface-panel);border-radius:9px;padding:0 12px}
+.search__input{flex:1;min-width:0;background:none;border:0;padding:8px 0;outline:0}.search:focus-within{border-color:var(--accent)}
+.search__hint{font-family:var(--font-mono);font-size:11px;color:var(--text-faint);border:1px solid var(--border-subtle);border-radius:5px;padding:0 6px}
+.icon-button{position:relative;display:grid;place-items:center;width:36px;height:36px;border-radius:9px;border:1px solid var(--border-strong);background:var(--surface-panel);cursor:pointer}
+.icon-button__count{position:absolute;top:-5px;right:-5px;background:var(--status-bad);color:#fff;border-radius:99px;font-size:10.5px;font-weight:700;min-width:17px;height:17px;display:grid;place-items:center}
+.avatar{width:26px;height:26px;border-radius:50%;background:var(--accent-surface);color:var(--accent);font-weight:700;font-size:11px;display:grid;place-items:center;border:1px solid var(--accent)}
 .popover-anchor{position:relative}
-.popover{position:absolute;right:0;top:44px;width:min(330px,92vw);background:var(--surface-panel);border:1px solid var(--border-strong);border-radius:var(--radius-panel);box-shadow:var(--shadow-popover);padding:10px;z-index:30}
+.popover{position:absolute;right:0;top:46px;width:min(340px,92vw);background:var(--surface-panel);border:1px solid var(--border-strong);border-radius:var(--radius-panel);box-shadow:var(--shadow-popover);padding:10px;z-index:30}
+.popover--narrow{width:200px}
 .popover__option{display:flex;gap:10px;width:100%;text-align:left;background:none;border:0;padding:8px;border-radius:var(--radius-control);cursor:pointer;align-items:flex-start}
 .popover__option:hover,.popover__option[aria-checked="true"]{background:var(--surface-raised)}
-.popover__hint{display:block;color:var(--text-muted)}
-.popover__divider{border:0;border-top:1px solid var(--border-subtle);margin:8px 0}
-.popover__title{padding:4px 8px;color:var(--text-muted)}
-.mode-banner{background:var(--status-warn-surface);color:var(--status-warn);font-size:12.5px;padding:7px 0;margin-inline:calc(-1*max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px))}
+.popover__hint{display:block;color:var(--text-muted)}.popover__divider{border:0;border-top:1px solid var(--border-subtle);margin:8px 0}.popover__title{padding:4px 8px;color:var(--text-muted)}
+.mode-banner{background:var(--status-warn-surface);color:var(--status-warn);font-size:12.5px;padding:7px 20px}
 .mode-banner__inner{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 
-/* status pill, tag */
-.pill{display:inline-flex;align-items:center;gap:6px;padding:1px 9px;border-radius:99px;font-size:12px;font-weight:600;white-space:nowrap;border:1px solid transparent;color:var(--status-unknown);background:var(--status-unknown-surface)}
+/* pill, tag, buttons */
+.pill{display:inline-flex;align-items:center;gap:6px;padding:1px 9px;border-radius:99px;font-size:11.5px;font-weight:600;white-space:nowrap;border:1px solid transparent;color:var(--status-unknown);background:var(--status-unknown-surface)}
 .pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.pill--plain::before{display:none}
 .pill[data-tone="ok"]{color:var(--status-ok);background:var(--status-ok-surface)}
 .pill[data-tone="warn"]{color:var(--status-warn);background:var(--status-warn-surface)}.pill[data-tone="warn"]::before{border-radius:1px;transform:rotate(45deg)}
 .pill[data-tone="bad"]{color:var(--status-bad);background:var(--status-bad-surface)}.pill[data-tone="bad"]::before{border-radius:2px}
 .pill[data-tone="unknown"]{border:1px dashed var(--status-unknown)}.pill[data-tone="unknown"]::before{background:none;border:1.5px dashed currentColor}
 .pill[data-tone="accent"]{color:var(--accent);background:var(--accent-surface)}
-.pill--compact{padding:0 6px}
-.tag{font-family:var(--font-mono);font-size:11.5px;padding:1px 7px;border-radius:5px;background:var(--surface-raised);color:var(--text-muted);border:1px solid var(--border-subtle)}
+.tag{font-family:var(--font-mono);font-size:11px;padding:1px 7px;border-radius:5px;background:var(--surface-raised);color:var(--text-muted);border:1px solid var(--border-subtle);white-space:nowrap}
+.tag[data-tone="ok"]{color:var(--status-ok);background:var(--status-ok-surface);border-color:transparent}.tag[data-tone="warn"]{color:var(--status-warn);background:var(--status-warn-surface);border-color:transparent}
+.tag[data-tone="bad"]{color:var(--status-bad);background:var(--status-bad-surface);border-color:transparent}.tag[data-tone="accent"]{color:var(--accent);background:var(--accent-surface);border-color:transparent}
+.button{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--border-strong);background:var(--surface-raised);padding:7px 14px;border-radius:var(--radius-control);cursor:pointer;font-weight:600;white-space:nowrap}
+.button--primary{background:var(--accent);border-color:var(--accent);color:var(--accent-contrast)}
+.button--outline{background:transparent;border-color:var(--accent);color:var(--accent)}
+.button--danger{color:var(--status-bad);border-color:var(--status-bad);background:none}
+.button:disabled{opacity:.45;cursor:not-allowed}
+.link-button{background:none;border:0;color:var(--accent);cursor:pointer;padding:0;font-size:12px}
+.lock-hint{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--text-muted);background:var(--surface-raised);padding:8px 10px;border-radius:var(--radius-control);border:1px dashed var(--border-strong)}
+.textarea{width:100%;background:var(--surface-page);border:1px solid var(--border-strong);border-radius:var(--radius-control);padding:8px 10px;resize:vertical;min-height:62px}
+.notice{border-left:3px solid var(--accent);background:var(--accent-surface);padding:9px 12px;border-radius:0 var(--radius-control) var(--radius-control) 0;font-size:12.5px}
+.command-line{font-family:var(--font-mono);font-size:12px;background:var(--surface-page);border:1px solid var(--border-subtle);padding:8px 10px;border-radius:var(--radius-control)}
 
 /* panel */
-.panel{background:var(--surface-panel);border:1px solid var(--border-subtle);border-radius:var(--radius-panel)}
-.panel__header{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border-subtle)}
-.panel__body{padding:var(--space-4)}
-.panel--decision{border-color:var(--status-warn);background:linear-gradient(var(--status-warn-surface),var(--surface-panel) 60%)}
-.panel--decision[data-state="resolved"]{border-color:var(--border-subtle);background:var(--surface-panel)}
-.stat-tile{padding:14px 16px}
-.stat-tile__value{display:block;font:700 30px/1.1 var(--font-display);font-variant-numeric:tabular-nums}
-.stat-tile__label{color:var(--text-muted);font-size:12.5px}
-.stat-tile[data-tone="bad"]{border-color:var(--status-bad);background:linear-gradient(var(--status-bad-surface),var(--surface-panel))}
-.stat-tile[data-tone="bad"] .stat-tile__value{color:var(--status-bad)}
-.stat-tile__value[data-tone="bad"]{color:var(--status-bad)}.stat-tile__value[data-tone="warn"]{color:var(--status-warn)}.stat-tile__value[data-tone="ok"]{color:var(--status-ok)}
+.panel{background:var(--surface-panel);border:1px solid var(--border-subtle);border-radius:var(--radius-panel);min-width:0}
+.panel__header{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border-subtle);flex-wrap:wrap}
+.panel__title{display:flex;gap:9px;align-items:center;font:600 14.5px var(--font-body)}.panel__title .icon{color:var(--text-muted)}
+.panel__body{padding:14px 16px}
+.scroll-target{scroll-margin-top:84px}
 
-/* attention list */
-.attention-item{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;padding:14px 16px;align-items:center;border:0;border-top:1px solid var(--border-subtle);cursor:pointer;background:none;text-align:left;width:100%}
-.attention-item:first-of-type{border-top:0}.attention-item:hover{background:var(--surface-raised)}
-.attention-item__severity{width:4px;align-self:stretch;border-radius:4px;background:var(--status-warn)}
-.attention-item__severity[data-severity="high"]{background:var(--status-bad)}
-@media (max-width:640px){.attention-item{grid-template-columns:auto minmax(0,1fr)}.attention-item__action{grid-column:2}}
+/* workspace and incident banner */
+.workspace{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:16px;padding:16px 20px 56px;align-items:start}
+@media (max-width:1240px){.workspace{grid-template-columns:minmax(0,1fr)}}
+.workspace__main{display:grid;gap:16px;min-width:0}
+.row-split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:16px}.row-triple{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+@media (min-width:1000px){.row-triple{grid-template-columns:repeat(2,minmax(0,1fr))}.row-triple>:first-child{grid-column:1/-1}}
+@media (min-width:1560px){.row-triple{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr)}.row-triple>:first-child{grid-column:auto}}
+@media (max-width:900px){.row-split{grid-template-columns:minmax(0,1fr)}}
+.incident-banner{border:1px solid var(--status-bad);background:linear-gradient(var(--status-bad-surface),var(--surface-panel) 70%);border-radius:var(--radius-panel);box-shadow:var(--shadow-alert);padding:16px 18px;min-width:0}
+.incident-banner[data-state="calm"]{border-color:var(--border-subtle);background:var(--surface-panel);box-shadow:none}
+.incident-banner[data-state="closed"]{border-color:var(--status-ok);background:linear-gradient(var(--status-ok-surface),var(--surface-panel) 70%);box-shadow:none}
+.incident-banner__eyebrow{display:flex;gap:10px;align-items:center;color:var(--status-bad);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;flex-wrap:wrap}
+.incident-banner[data-state="closed"] .incident-banner__eyebrow{color:var(--status-ok)}
+.incident-banner__id{color:var(--text-primary);font-weight:600;letter-spacing:0;text-transform:none}
+.incident-banner__title{font:700 25px/1.2 var(--font-display);margin:2px 0 10px}
+.incident-banner__actions{display:flex;gap:8px;flex-wrap:wrap}
+.incident-banner__meta{display:flex;gap:12px 18px;align-items:center;flex-wrap:wrap;font-size:12.5px;color:var(--text-muted);margin-bottom:8px}
+.service-chip{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--border-strong);border-radius:99px;padding:0 9px;font-size:12px;color:var(--text-primary);background:var(--surface-raised);cursor:pointer}
+.service-chip__dot{width:7px;height:7px;border-radius:50%;background:var(--status-unknown)}
+.service-chip[data-tone="bad"] .service-chip__dot{background:var(--status-bad)}.service-chip[data-tone="warn"] .service-chip__dot{background:var(--status-warn)}.service-chip[data-tone="ok"] .service-chip__dot{background:var(--status-ok)}
+.severity-tag{font-weight:700;color:var(--status-bad);background:var(--status-bad-surface);border:1px solid var(--status-bad);border-radius:6px;padding:1px 9px;font-size:12px}
+.pipeline{display:grid;grid-template-columns:repeat(11,minmax(0,1fr));list-style:none;margin:14px 0 0;padding:0}
+.pipeline__step{position:relative;padding-top:24px;text-align:center;font-size:10.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.03em}
+.pipeline__step::before{content:"";position:absolute;top:8px;left:-50%;right:50%;height:2px;background:var(--border-strong)}
+.pipeline__step:first-child::before{display:none}
+.pipeline__step::after{content:"";position:absolute;top:2px;left:50%;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:var(--surface-page);border:2px solid var(--border-strong)}
+.pipeline__step[data-state="done"]{color:var(--text-muted)}.pipeline__step[data-state="done"]::before{background:var(--status-ok)}.pipeline__step[data-state="done"]::after{background:var(--status-ok);border-color:var(--status-ok)}
+.pipeline__step[data-state="current"]{color:var(--text-primary);font-weight:700}.pipeline__step[data-state="current"]::before{background:var(--status-ok)}.pipeline__step[data-state="current"]::after{border-color:var(--accent);background:var(--accent);box-shadow:0 0 0 4px var(--accent-surface)}
+.pipeline__time{display:block;font-family:var(--font-mono);font-size:10px;text-transform:none;letter-spacing:0;color:var(--text-muted);margin-top:2px}
+@media (max-width:900px){.pipeline{grid-template-columns:repeat(11,64px);overflow-x:auto;padding-bottom:6px}}
 
-/* service card */
-.service-card{padding:14px 16px;cursor:pointer;text-align:left;width:100%;display:block;border-top:3px solid var(--status-unknown);transition:border-color .15s}
-.service-card:hover{outline:1px solid var(--accent)}
-.service-card[data-tone="ok"]{border-top-color:var(--status-ok)}.service-card[data-tone="warn"]{border-top-color:var(--status-warn)}.service-card[data-tone="bad"]{border-top-color:var(--status-bad)}
-.service-card__name{font:600 16px var(--font-display)}
-.facts{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;font-size:13px}
-.facts__term{color:var(--text-muted)}.facts__value{margin:0;word-break:break-word}
-.facts--numeric .facts__value{text-align:right;font-variant-numeric:tabular-nums}
+/* kpi */
+.kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:12px}
+.kpi-card{padding:12px 14px;display:grid;gap:2px}
+.kpi-card__label{color:var(--text-muted);font-size:12px;font-weight:500;display:flex;gap:6px;align-items:center}
+.kpi-card__value{font:700 26px/1.15 var(--font-display);font-variant-numeric:tabular-nums}
+.kpi-card[data-tone="bad"] .kpi-card__value{color:var(--status-bad)}.kpi-card[data-tone="warn"] .kpi-card__value{color:var(--status-warn)}.kpi-card[data-tone="ok"] .kpi-card__value{color:var(--status-ok)}
+.kpi-card__delta{font-size:11.5px;font-weight:600;display:flex;gap:4px;align-items:center;color:var(--text-muted)}
+.kpi-card__delta[data-tone="bad"]{color:var(--status-bad)}.kpi-card__delta[data-tone="ok"]{color:var(--status-ok)}.kpi-card__delta[data-tone="warn"]{color:var(--status-warn)}
+.kpi-card .sparkline{height:30px;margin-top:4px}
 .sparkline{display:block;width:100%;height:34px;margin-top:10px}
-.sparkline__area{opacity:.13;fill:var(--status-unknown)}.sparkline__line{fill:none;stroke:var(--status-unknown);stroke-width:1.8}.sparkline__end{fill:var(--status-unknown)}
+.sparkline__area{opacity:.14;fill:var(--status-unknown)}.sparkline__line{fill:none;stroke:var(--status-unknown);stroke-width:1.8}.sparkline__end{fill:var(--status-unknown)}
 .sparkline[data-tone="ok"] .sparkline__area,.sparkline[data-tone="ok"] .sparkline__end{fill:var(--status-ok)}.sparkline[data-tone="ok"] .sparkline__line{stroke:var(--status-ok)}
 .sparkline[data-tone="warn"] .sparkline__area,.sparkline[data-tone="warn"] .sparkline__end{fill:var(--status-warn)}.sparkline[data-tone="warn"] .sparkline__line{stroke:var(--status-warn)}
 .sparkline[data-tone="bad"] .sparkline__area,.sparkline[data-tone="bad"] .sparkline__end{fill:var(--status-bad)}.sparkline[data-tone="bad"] .sparkline__line{stroke:var(--status-bad)}
 
-/* incident table */
+/* timeline */
+.timeline{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.timeline__item{display:grid;grid-template-columns:18px 64px minmax(0,1fr);gap:8px;align-items:baseline;padding:3px 0}
+.timeline__marker{width:9px;height:9px;border-radius:50%;background:var(--border-strong);justify-self:center;align-self:center}
+.timeline__marker[data-kind="alert"]{background:var(--status-bad)}.timeline__marker[data-kind="diagnosis"]{background:var(--accent)}
+.timeline__marker[data-kind="resolved"]{background:var(--status-ok)}.timeline__marker[data-kind="action"]{background:var(--status-warn)}
+.timeline__time{color:var(--text-muted);font-family:var(--font-mono);font-size:12px}
+
+/* topology */
+.topology{width:100%;height:auto;display:block}
+.topology__label{fill:var(--text-primary);font:600 13px var(--font-body)}.topology__state{font:11px var(--font-body);fill:var(--status-unknown)}.topology__detail{fill:var(--text-muted);font:11px var(--font-body)}
+.topology__edge{stroke:var(--border-strong);stroke-width:1.5;fill:none}.topology__edge--failing{stroke:var(--status-bad);stroke-dasharray:4 4}
+.topology__arrow{fill:var(--text-faint)}
+.topology__node{cursor:pointer}.topology__node rect{fill:var(--surface-raised);stroke:var(--status-unknown);stroke-width:2}.topology__node:hover rect{fill:var(--accent-surface)}
+.topology__dot{fill:var(--status-unknown)}
+.topology__node[data-tone="ok"] rect{stroke:var(--status-ok)}.topology__node[data-tone="ok"] .topology__dot{fill:var(--status-ok)}.topology__node[data-tone="ok"] .topology__state{fill:var(--status-ok)}
+.topology__node[data-tone="warn"] rect{stroke:var(--status-warn)}.topology__node[data-tone="warn"] .topology__dot{fill:var(--status-warn)}.topology__node[data-tone="warn"] .topology__state{fill:var(--status-warn)}
+.topology__node[data-tone="bad"] rect{stroke:var(--status-bad)}.topology__node[data-tone="bad"] .topology__dot{fill:var(--status-bad)}.topology__node[data-tone="bad"] .topology__state{fill:var(--status-bad)}
+.topology__node[data-selected="true"] rect{stroke-width:3.5}
+
+/* evidence */
+.tabs{display:flex;gap:2px;overflow-x:auto}
+.tabs__tab{background:none;border:0;padding:7px 12px;color:var(--text-muted);cursor:pointer;white-space:nowrap;font-weight:500;border-radius:8px;display:inline-flex;gap:7px;align-items:center}
+.tabs__tab[aria-selected="true"]{color:var(--text-primary);background:var(--accent-surface);box-shadow:inset 0 -2px 0 var(--status-ok)}
+.evidence-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;padding:0 16px 14px}
+@media (max-width:900px){.evidence-grid{grid-template-columns:minmax(0,1fr)}}
+.evidence-list{display:grid;gap:0;border:1px solid var(--border-subtle);border-radius:var(--radius-control);overflow:hidden;list-style:none;margin:0;padding:0;align-content:start}
+.evidence-item{display:grid;grid-template-columns:22px 92px minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 12px;border-top:1px solid var(--border-subtle)}
+.evidence-item:first-child{border-top:0}
+.evidence-item__icon{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;color:#fff;background:var(--status-unknown)}
+.evidence-item__icon[data-tone="ok"]{background:var(--status-ok)}.evidence-item__icon[data-tone="warn"]{background:var(--status-warn)}.evidence-item__icon[data-tone="accent"]{background:var(--accent)}
+.evidence-item__icon .icon{width:12px;height:12px;stroke-width:3}
+@media (max-width:700px){.evidence-item{grid-template-columns:22px minmax(0,1fr)}.evidence-item .tag{display:none}}
+.log-view{background:var(--surface-page);border:1px solid var(--border-subtle);border-radius:var(--radius-control);font-family:var(--font-mono);font-size:12px;max-height:200px;overflow:auto;padding:6px 0}
+.log-view__line{padding:1px 12px;white-space:pre-wrap;overflow-wrap:anywhere}.log-view__line[data-level="error"]{color:var(--status-bad)}
+
+/* remediation */
+.option-row{display:grid;grid-template-columns:22px minmax(0,1fr) 58px 104px;gap:10px;align-items:center;width:100%;background:none;border:1px solid transparent;border-radius:var(--radius-control);padding:9px 10px;text-align:left;cursor:pointer}
+.option-row:hover{background:var(--surface-raised)}
+.option-row[aria-checked="true"]{background:var(--accent-surface);border-color:var(--accent)}
+.option-row[data-policy="denied"],.option-row[data-policy="proposed"]{color:var(--text-muted)}
+.option-head{display:grid;grid-template-columns:22px minmax(0,1fr) 58px 104px;gap:10px;padding:0 10px 4px;font-size:11.5px;color:var(--text-muted)}
+.option-row__scope{display:flex;gap:6px;align-items:center;font-size:11.5px;color:var(--text-muted);margin-top:2px}
+.radio{width:15px;height:15px;border-radius:50%;border:2px solid var(--border-strong);display:grid;place-items:center}
+.radio[data-checked="true"]{border-color:var(--accent)}.radio[data-checked="true"]::after{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent)}
+.policy-result{display:inline-flex;gap:5px;align-items:center;font-weight:600;font-size:12px;color:var(--status-unknown)}
+.policy-result[data-policy="allowed"]{color:var(--status-ok)}.policy-result[data-policy="denied"]{color:var(--status-bad)}.policy-result[data-policy="proposed"]{color:var(--status-warn)}
+.remediation-footer{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-top:1px solid var(--border-subtle);padding-top:12px;font-size:12px;color:var(--text-muted)}
+.remediation-footer__facts{display:grid;gap:3px}
+.remediation-footer__facts b{color:var(--status-warn);font-weight:600}
+
+/* verification and report */
+.check-list{list-style:none;padding:0;display:grid;gap:7px}
+.check-list__item{display:grid;grid-template-columns:20px minmax(0,1fr) auto;gap:9px;align-items:center;font-size:13px}
+.check-list__mark{display:grid;place-items:center;width:18px;height:18px;border-radius:50%;border:2px solid var(--border-strong);color:#fff}
+.check-list__mark .icon{width:11px;height:11px;stroke-width:3.2}
+.check-list__item[data-result="pass"] .check-list__mark{background:var(--status-ok);border-color:var(--status-ok)}.check-list__item[data-result="fail"] .check-list__mark{background:var(--status-bad);border-color:var(--status-bad)}
+.check-list__value{font-variant-numeric:tabular-nums;color:var(--text-muted);font-size:12.5px}
+.report-line{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;font-size:12.5px;align-items:baseline}.report-line dt{font-weight:600;color:var(--text-primary)}.report-line dd{margin:0;color:var(--text-muted)}
+.followups{list-style:none;padding:0;display:grid;gap:7px}
+.followups__item{display:grid;grid-template-columns:16px minmax(0,1fr) auto;gap:8px;align-items:center;font-size:12.5px}
+.followups__box{width:14px;height:14px;border:1.5px solid var(--border-strong);border-radius:3px}
+
+/* commander */
+.commander{display:grid;gap:12px;position:sticky;top:78px;min-width:0;scroll-margin-top:84px}
+@media (max-width:1240px){.commander{position:static}}
+.commander__header{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:2px 2px 0}
+.commander__title{display:flex;gap:9px;align-items:center;font:700 17px var(--font-display)}.commander__title .icon{color:var(--accent)}
+.commander-section{padding:12px 14px;display:grid;gap:9px}
+.commander-section h3{display:flex;gap:8px;align-items:center}.commander-section h3 .icon{color:var(--text-muted)}
+.segment{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.segment__cell{background:var(--surface-raised);border-radius:8px;padding:6px 8px;text-align:center;font-size:11.5px;color:var(--text-muted)}.segment__cell b{display:block;color:var(--text-primary);font-size:12.5px}
+.segment__cell[data-tone="bad"] b{color:var(--status-bad)}.segment__cell[data-tone="accent"] b{color:var(--accent)}
+.state-list{list-style:none;padding:0;display:grid;gap:6px;font-size:12.5px}
+.state-list__item{display:grid;grid-template-columns:16px minmax(0,1fr) auto;gap:8px;align-items:center}
+.state-list__mark{width:14px;height:14px;border-radius:50%;border:2px solid var(--border-strong)}
+.state-list__item[data-state="done"] .state-list__mark{background:var(--status-ok);border-color:var(--status-ok)}.state-list__item[data-state="active"] .state-list__mark{border-color:var(--accent);background:radial-gradient(var(--accent) 35%,transparent 40%)}
+.state-list__value{color:var(--text-muted);text-align:right}
+.next-step{border:1px solid var(--status-warn);background:var(--status-warn-surface);border-radius:var(--radius-panel);padding:12px 14px;display:grid;gap:5px;font-size:12.5px}
+.next-step__title{display:flex;gap:8px;align-items:center;font-weight:700;color:var(--status-warn)}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;font-size:13px}.facts__term{color:var(--text-muted)}.facts__value{margin:0;word-break:break-word}
+.facts--numeric .facts__value{text-align:right;font-variant-numeric:tabular-nums}
+.audit-list{list-style:none;padding:0;display:grid;gap:7px;font-size:12.5px}.audit-list__item{display:grid;grid-template-columns:62px minmax(0,1fr);gap:8px}.audit-list__time{font-family:var(--font-mono);font-size:12px;color:var(--text-muted)}
+
+/* other pages */
+.service-card{padding:14px 16px;cursor:pointer;text-align:left;width:100%;display:block;border-top:3px solid var(--status-unknown)}
+.service-card:hover{outline:1px solid var(--accent)}
+.service-card[data-tone="ok"]{border-top-color:var(--status-ok)}.service-card[data-tone="warn"]{border-top-color:var(--status-warn)}.service-card[data-tone="bad"]{border-top-color:var(--status-bad)}
+.service-card__name{font:600 16px var(--font-display)}
 .incident-row{display:grid;grid-template-columns:90px minmax(0,1.6fr) 150px minmax(0,1fr) 150px;gap:14px;padding:13px 16px;border:0;border-top:1px solid var(--border-subtle);align-items:center;cursor:pointer;width:100%;background:none;text-align:left}
 .incident-row:hover{background:var(--surface-raised)}
 .incident-row--head{cursor:default;font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;border-top:0}.incident-row--head:hover{background:none}
@@ -137,121 +274,94 @@ button,input,textarea{font:inherit;color:inherit}
 .filter-group{display:flex;gap:var(--space-2);flex-wrap:wrap}
 .filter-group__option{border:1px solid var(--border-strong);background:var(--surface-panel);padding:5px 12px;border-radius:99px;cursor:pointer}
 .filter-group__option[aria-pressed="true"]{background:var(--accent-surface);border-color:var(--accent);color:var(--accent)}
-
-/* stepper */
-.stepper{display:grid;grid-template-columns:repeat(4,1fr);margin:18px 0 6px;padding:0;list-style:none}
-.stepper__step{position:relative;padding-top:20px;font-size:12.5px;color:var(--text-faint)}
-.stepper__step::before{content:"";position:absolute;top:5px;left:0;right:0;height:3px;background:var(--border-strong);border-radius:3px}
-.stepper__step::after{content:"";position:absolute;top:0;left:0;width:13px;height:13px;border-radius:50%;background:var(--surface-page);border:3px solid var(--border-strong)}
-.stepper__step[data-state="done"]{color:var(--text-primary)}.stepper__step[data-state="done"]::before{background:var(--status-ok)}.stepper__step[data-state="done"]::after{background:var(--status-ok);border-color:var(--status-ok)}
-.stepper__step[data-state="current"],.stepper__step[data-state="blocked"]{color:var(--text-primary);font-weight:600}
-.stepper__step[data-state="current"]::before,.stepper__step[data-state="blocked"]::before{background:linear-gradient(90deg,var(--accent),var(--border-strong))}
-.stepper__step[data-state="current"]::after{border-color:var(--accent)}
-.stepper__step[data-state="blocked"]::after{border-color:var(--status-warn);background:var(--status-warn)}
-.stepper__note{display:block;font-weight:400;color:var(--text-muted)}
-
-/* tabs */
-.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border-subtle);margin:22px 0 18px;overflow-x:auto}
-.tabs__tab{background:none;border:0;border-bottom:2px solid transparent;padding:9px 14px;color:var(--text-muted);cursor:pointer;white-space:nowrap;font-weight:500}
-.tabs__tab[aria-selected="true"]{color:var(--text-primary);border-bottom-color:var(--accent)}
-
-/* controls */
-.button{border:1px solid var(--border-strong);background:var(--surface-raised);padding:8px 14px;border-radius:var(--radius-control);cursor:pointer;font-weight:600}
-.button--primary{background:var(--accent);border-color:var(--accent);color:var(--accent-contrast)}
-.button--danger{color:var(--status-bad);border-color:var(--status-bad);background:none}
-.button:disabled{opacity:.45;cursor:not-allowed}
-.rail{position:sticky;top:calc(70px + env(safe-area-inset-top,0px));display:grid;gap:14px}
-.lock-hint{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--text-muted);background:var(--surface-raised);padding:8px 10px;border-radius:var(--radius-control);border:1px dashed var(--border-strong)}
-.textarea{width:100%;background:var(--surface-page);border:1px solid var(--border-strong);border-radius:var(--radius-control);padding:8px 10px;resize:vertical;min-height:62px}
-.notice{border-left:3px solid var(--accent);background:var(--accent-surface);padding:10px 12px;border-radius:0 var(--radius-control) var(--radius-control) 0;font-size:13px}
-.notice--warn{border-color:var(--status-warn);background:var(--status-warn-surface)}
-.command-line{font-family:var(--font-mono);font-size:12.5px;background:var(--surface-page);border:1px solid var(--border-subtle);padding:10px 12px;border-radius:var(--radius-control)}
-
-/* timeline */
-.timeline{list-style:none;margin:0;padding:0;position:relative}.timeline::before{content:"";position:absolute;left:79px;top:6px;bottom:6px;width:2px;background:var(--border-subtle)}
-.timeline__item{display:grid;grid-template-columns:70px 20px minmax(0,1fr);gap:8px;padding:7px 0}
-.timeline__time{color:var(--text-muted);font-family:var(--font-mono);font-size:12px;text-align:right;padding-top:2px}
-.timeline__marker{width:11px;height:11px;border-radius:50%;margin:6px 0 0 5px;background:var(--border-strong);border:2px solid var(--surface-chrome);position:relative}
-.timeline__marker[data-kind="alert"]{background:var(--status-bad)}.timeline__marker[data-kind="diagnosis"]{background:var(--accent)}
-.timeline__marker[data-kind="resolved"]{background:var(--status-ok)}.timeline__marker[data-kind="action"]{background:var(--status-warn)}
-
-/* diagnosis and evidence */
-.ranking-bar{appearance:none;-webkit-appearance:none;width:100%;height:8px;border:0;border-radius:6px;background:var(--surface-raised);overflow:hidden}
-.ranking-bar::-webkit-progress-bar{background:var(--surface-raised)}.ranking-bar::-webkit-progress-value{background:var(--accent);border-radius:6px}.ranking-bar::-moz-progress-bar{background:var(--accent)}
-.claim-list{list-style:none;padding:0;display:grid;gap:7px}
-.claim-list__item{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start}
-.evidence-row{display:grid;grid-template-columns:70px 100px minmax(0,1fr) auto;gap:12px;padding:10px 16px;border-top:1px solid var(--border-subtle);align-items:start}
-.evidence-row[data-key="true"]{background:var(--accent-surface)}
-@media (max-width:700px){.evidence-row{grid-template-columns:60px 1fr}}
-.log-view{background:var(--surface-page);border:1px solid var(--border-subtle);border-radius:var(--radius-control);font-family:var(--font-mono);font-size:12px;max-height:230px;overflow:auto;padding:6px 0}
-.log-view__line{padding:1px 12px;white-space:pre-wrap;overflow-wrap:anywhere}.log-view__line[data-level="error"]{color:var(--status-bad)}
-
-/* topology */
-.topology{width:100%;height:auto;display:block}
-.topology__label{fill:var(--text-primary);font:600 13px var(--font-display)}.topology__sublabel{fill:var(--text-muted);font:11px var(--font-body)}
-.topology__edge{stroke:var(--border-strong);stroke-width:1.6;fill:none}.topology__edge--failing{stroke:var(--status-bad);stroke-dasharray:5 4}
-.topology__arrow{fill:var(--text-faint)}
-.topology__node{cursor:pointer}.topology__node rect{fill:var(--surface-panel);stroke:var(--status-unknown);stroke-width:2}.topology__node:hover rect{fill:var(--surface-raised)}
-.topology__node[data-tone="ok"] rect{stroke:var(--status-ok)}.topology__node[data-tone="warn"] rect{stroke:var(--status-warn)}.topology__node[data-tone="bad"] rect{stroke:var(--status-bad)}
-.topology__node[data-selected="true"] rect{stroke-width:3.5}
-
-/* matrix */
+.layout-split{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;align-items:start}@media (max-width:980px){.layout-split{grid-template-columns:minmax(0,1fr)}}
 .matrix{width:100%;border-collapse:collapse}.matrix th,.matrix td{padding:10px 14px;border-top:1px solid var(--border-subtle);text-align:center}.matrix th:first-child,.matrix td:first-child{text-align:left}
 .matrix thead th{font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;border-top:0}
-.matrix [data-current="true"]{background:var(--accent-surface)}
-.matrix__yes{color:var(--status-ok);font-weight:700}.matrix__no{color:var(--text-faint)}
-.matrix--wide{min-width:640px}
+.matrix [data-current="true"]{background:var(--accent-surface)}.matrix__yes{color:var(--status-ok);font-weight:700}.matrix__no{color:var(--text-faint)}.matrix--wide{min-width:640px}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--text-primary);color:var(--surface-page);padding:10px 16px;border-radius:10px;box-shadow:var(--shadow-popover);z-index:50;font-weight:500;max-width:92vw}
-.prototype-note{font-size:12px;color:var(--text-muted);padding-top:10px}
-.list-plain{padding-left:18px}
 </style>
 
 <div id="app"></div>
 <div id="toast" class="toast" role="status" hidden></div>
 
 <script>
-/* Naming: camelCase code; data fields are snake_case exactly as the API contract; enum values are lower snake_case,
-   except health_state (HEALTHY | DEGRADED | UNHEALTHY | UNKNOWN), which is frozen upper-case. */
+/* Naming: camelCase code; data fields are snake_case as in the API contract; enum values are lower snake_case,
+   except health_state (HEALTHY | DEGRADED | UNHEALTHY | UNKNOWN), which is frozen upper-case. All data below is SAMPLE data. */
 
-/* ---------- sample data (modelled on the real sandbox run; labelled as sample in the UI) ---------- */
+/* ---------- sample data ---------- */
 const services = [
-  {name:'api', kind:'app', health_state:'UNHEALTHY', availability:'38%', latency:'4.2 s', load:'3 rps', depends_on:['redis','app-db'], incident_id:'INC-0003', trend:[99,99,98,99,97,80,52,40,38,38,37,38]},
-  {name:'worker', kind:'queue_worker', health_state:'UNHEALTHY', availability:'0%', latency:'n/a', load:'0 jobs/s', depends_on:['redis','app-db'], incident_id:'INC-0002', trend:[100,100,100,100,100,60,0,0,0,0,0,0]},
-  {name:'app-db', kind:'database', health_state:'DEGRADED', availability:'100%', latency:'0.3 ms probe', load:'100/100 conn', depends_on:[], incident_id:'INC-0003', trend:[4,6,5,5,30,70,100,100,100,100,100,100]},
-  {name:'redis', kind:'cache', health_state:'HEALTHY', availability:'100%', latency:'0.9 ms', load:'queue 0', depends_on:[], incident_id:null, trend:[0,0,1,0,0,0,0,0,1,0,0,0]},
-  {name:'loadgen', kind:'load_generator', health_state:'HEALTHY', availability:'100%', latency:'n/a', load:'10 rps', depends_on:['api'], incident_id:null, trend:[10,10,10,10,10,10,10,10,10,10,10,10]},
+  {name:'api', kind:'app', health_state:'UNHEALTHY', availability:'38%', latency:'4.2 s', load:'3 rps', detail:'Avail 38%', depends_on:['redis','app-db'], incident_id:'INC-0003', trend:[99,99,98,99,97,80,52,40,38,38,37,38]},
+  {name:'worker', kind:'queue_worker', health_state:'UNHEALTHY', availability:'0%', latency:'n/a', load:'0 jobs/s', detail:'Jobs: 0', depends_on:['redis','app-db'], incident_id:'INC-0003', trend:[100,100,100,100,100,60,0,0,0,0,0,0]},
+  {name:'app-db', kind:'database', health_state:'DEGRADED', availability:'100%', latency:'0.3 ms probe', load:'100/100 conn', detail:'Conn: 100/100', depends_on:[], incident_id:'INC-0003', trend:[4,6,5,5,30,70,100,100,100,100,100,100]},
+  {name:'redis', kind:'cache', health_state:'HEALTHY', availability:'100%', latency:'0.9 ms', load:'queue 0', detail:'Healthy', depends_on:[], incident_id:null, trend:[0,0,1,0,0,0,0,0,1,0,0,0]},
+  {name:'loadgen', kind:'load_generator', health_state:'HEALTHY', availability:'100%', latency:'n/a', load:'10 rps', detail:'Healthy', depends_on:['api'], incident_id:null, trend:[10,10,10,10,10,10,10,10,10,10,10,10]},
 ];
 const incidents = {
-  'INC-0003': {incident_id:'INC-0003', title:'app-db is out of connections', state:'diagnosed', severity:'high', opened_at:'19:10:51Z', age:'4 m', progress:2, services:['api','worker','app-db'],
-    summary:'The database process is healthy but has no free connections, so api and worker cannot connect.',
-    top_cause:{cause_id:'app_db_connection_exhaustion', ranking:.44, basis:['evidence coverage 0.73 (8.0 / 11.0 signal weight)','1 independent signal type (metric), factor 0.60','contradiction share 0.00'],
-      claims:[{claim_type:'observation',text:'app-db refused the monitoring connection with "too many clients"',evidence_ids:'EV-034'},{claim_type:'inference',text:'Dependents cannot reach it: api, worker',evidence_ids:'EV-015, EV-024'},{claim_type:'observation',text:'app-db answers its availability probe, so it is not down',evidence_ids:'EV-028'},{claim_type:'inference',text:'More than one dependent is affected',evidence_ids:'EV-015'}],
-      contradicting:[], unknowns:['Connection counts and the leaking client are unavailable while the probe is refused (any count shown is stale).','Change feed unavailable: deploys and container events are not ruled out.'],
-      alternatives:[{cause_id:'app_db_unavailable',ranking:'0.05',note:'refuted: it still answers its probe'},{cause_id:'redis_unavailable',ranking:'rejected',note:'redis answers its probe'}]},
-    recommended_action:{action_id:'escalate', reason:'No safe catalogue action for connection exhaustion. Restarting a database is never allowed.'}, plan:null,
-    timeline:[{time:'19:10:51',kind:'alert',text:'api and worker lose app-db (cd_dependency_up = 0)'},{time:'19:10:56',kind:'alert',text:'worker logs: 100 error lines in 5 s'},{time:'19:14:41',kind:'alert',text:'Incident opened (rule dependency_down)'},{time:'19:14:51',kind:'diagnosis',text:'Evidence collected: 12 sources, 1 failed (change feed)'},{time:'19:14:51',kind:'diagnosis',text:'Diagnosis: app_db_connection_exhaustion, ranking 0.44'},{time:'19:14:51',kind:'action',text:'Recommended action: escalate to a human'}],
-    evidence:[{evidence_id:'EV-034',source:'metric',summary:'app-db db_refused: 0 → 1 over 61 samples',key:true},{evidence_id:'EV-015',source:'metric',summary:'api dependency_up:app-db: 1 → 0',key:false},{evidence_id:'EV-024',source:'metric',summary:'worker dependency_up:app-db: 1 → 0',key:false},{evidence_id:'EV-028',source:'metric',summary:'app-db cd_service_up = 1',key:false},{evidence_id:'EV-025',source:'logs',summary:'worker: 100 lines, 100 error-level (text is untrusted)',key:false},{evidence_id:'EV-035',source:'change',summary:'Change feed unavailable; deploys not observed',key:false}],
-    log_lines:[{level:'error',text:'{"level":"error","service":"worker","msg":"job failed","error":"OperationalError"}'},{level:'error',text:'{"level":"error","service":"worker","msg":"job failed","error":"OperationalError"}'},{level:'error',text:'{"level":"error","service":"api","msg":"redis connection failed","error":"Timeout connecting to server"}'}],
-    verification:null},
-  'INC-0002': {incident_id:'INC-0002', title:'worker stopped processing jobs', state:'remediating', severity:'medium', opened_at:'19:02:10Z', age:'12 m', progress:2, services:['worker'],
-    summary:'The worker process is down; its queue series disappeared at 19:02, which is how a dead worker looks here.',
-    top_cause:{cause_id:'worker_crash', ranking:.65, basis:['evidence coverage 0.80','2 independent signal types (metric, log)','contradiction share 0.00'],
-      claims:[{claim_type:'observation',text:'cd_service_up for worker is 0 since 19:02:08',evidence_ids:'EV-041'},{claim_type:'observation',text:'The queue length series is absent, not rising (the worker exports it)',evidence_ids:'EV-043'},{claim_type:'observation',text:'Container exited with code 137',evidence_ids:'EV-044'}],
-      contradicting:[], unknowns:['Why the process exited is not visible from telemetry.'], alternatives:[{cause_id:'redis_unavailable',ranking:'rejected',note:'redis answers its probe'}]},
-    recommended_action:{action_id:'restart_service', reason:'Restarting a stateless worker is low-impact and reversible.'},
-    plan:{plan_hash:'sha256:7b1e…c40a', risk:'medium', target:'cd-worker', command:'docker restart cd-worker', expires_in:'4 min', layer1:'pass (I-01 … I-08)', layer2:'allow with approval', resolution:null},
-    timeline:[{time:'19:02:08',kind:'alert',text:'worker down (cd_service_up = 0)'},{time:'19:02:10',kind:'alert',text:'Incident opened'},{time:'19:02:40',kind:'diagnosis',text:'Diagnosis: worker_crash, ranking 0.65'},{time:'19:02:41',kind:'action',text:'Plan proposed: restart cd-worker (medium risk)'},{time:'19:02:41',kind:'action',text:'Policy: allow with approval'}],
-    evidence:[{evidence_id:'EV-041',source:'metric',summary:'worker cd_service_up: 1 → 0',key:true},{evidence_id:'EV-043',source:'metric',summary:'worker queue length series absent',key:false},{evidence_id:'EV-044',source:'change',summary:'container cd-worker exited (137)',key:false}],
-    log_lines:[{level:'info',text:'{"level":"info","service":"worker","msg":"worker starting"}'}], verification:null},
-  'INC-0001': {incident_id:'INC-0001', title:'Redis outage', state:'closed', severity:'high', opened_at:'18:21:03Z', age:'closed', progress:4, services:['redis','api','worker'],
-    summary:'Redis was unreachable; api and worker failed on every cache and queue call. Restarting it restored service.',
-    top_cause:{cause_id:'redis_unavailable', ranking:.82, basis:['evidence coverage 0.91','3 independent signal types','contradiction share 0.00'],
-      claims:[{claim_type:'observation',text:'redis cd_service_up = 0',evidence_ids:'EV-005'},{claim_type:'inference',text:'api error ratio 0.97 after redis went down',evidence_ids:'EV-009'}], contradicting:[], unknowns:[], alternatives:[]},
-    recommended_action:{action_id:'restart_service', reason:'Approved by an approver at 18:24.'},
-    plan:{plan_hash:'sha256:a91f…02d8', risk:'medium', target:'cd-redis', command:'docker restart cd-redis', expires_in:'—', layer1:'pass', layer2:'allow with approval', resolution:'Approved by m.rao at 18:24:12Z'},
-    timeline:[{time:'18:21:03',kind:'alert',text:'redis down'},{time:'18:21:30',kind:'diagnosis',text:'Diagnosis: redis_unavailable, 0.82'},{time:'18:24:12',kind:'action',text:'Plan approved by m.rao'},{time:'18:24:20',kind:'action',text:'cd-redis restarted'},{time:'18:25:30',kind:'resolved',text:'Verification passed: 7 of 7 checks'}],
-    evidence:[{evidence_id:'EV-005',source:'metric',summary:'redis cd_service_up: 1 → 0',key:true},{evidence_id:'EV-009',source:'metric',summary:'api error_ratio: 0.01 → 0.97',key:false}], log_lines:[],
-    verification:{verdict:'recovered', checks:[{name:'Service answers its probe',passed:true},{name:'Error ratio below 0.02',passed:true},{name:'p95 below 0.5 s',passed:true},{name:'Queue drains',passed:true},{name:'Independent probe URL ok',passed:true},{name:'No relapse in 60 s',passed:true},{name:'Dependents healthy',passed:true}]}},
+  'INC-0003': {incident_id:'INC-0003', title:'app-db connection exhaustion', state:'diagnosed', severity:'high', opened_at:'19:10:51Z', age:'4 min ago', pipeline_progress:4, pipeline_times:['19:10','19:10','19:10','19:14','19:14'], services:['api','worker','app-db'],
+    summary:'Database (app-db) has exhausted its connection pool, blocking api and worker from acquiring new connections, leading to elevated errors, higher latency and stalled jobs.', classification:'Availability',
+    kpis:[
+      {kpi_id:'error_rate', label:'Error Rate', value:'28.4%', tone:'bad', delta:'+27.6 pp', direction:'up', delta_tone:'bad', trend:[1,1,2,1,3,9,18,26,28,28,29,28]},
+      {kpi_id:'p95_latency', label:'P95 Latency', value:'4.2 s', tone:'bad', delta:'+3.8 s', direction:'up', delta_tone:'bad', trend:[.4,.4,.4,.5,.6,1.5,3,4,4.2,4.1,4.3,4.2]},
+      {kpi_id:'db_saturation', label:'DB Connection Saturation', value:'100%', tone:'warn', delta:'+61 pp', direction:'up', delta_tone:'warn', trend:[4,6,5,5,30,70,100,100,100,100,100,100]},
+      {kpi_id:'availability', label:'Availability', value:'71.6%', tone:'warn', delta:'−28.4 pp', direction:'down', delta_tone:'bad', trend:[100,100,99,100,98,90,80,74,72,72,71,72]},
+      {kpi_id:'queue_depth', label:'Queue Depth', value:'1,248', tone:'warn', delta:'+982 (373%)', direction:'up', delta_tone:'warn', trend:[10,12,11,14,40,200,500,800,1000,1100,1200,1248]}],
+    top_cause:{cause_id:'app_db_connection_exhaustion', ranking:.44, description:'Connection exhaustion due to unclosed or long-lived connections.', basis:['evidence coverage 0.73 (8.0 / 11.0 signal weight)','1 independent signal type (metric), factor 0.60','contradiction share 0.00'],
+      claims:[{claim_type:'observation',text:'app-db rejected connections: "too many clients"',evidence_id:'EV-034'},{claim_type:'observation',text:'api dependency to app-db failed (1 → 0)',evidence_id:'EV-015'},{claim_type:'observation',text:'worker dependency to app-db failed (1 → 0)',evidence_id:'EV-024'},{claim_type:'inference',text:'More than one dependent is affected',evidence_id:'EV-015'}],
+      unknowns:[{text:'Which client is holding the connections?',evidence_id:null},{text:'Deploys and container events are not ruled out (change feed unavailable).',evidence_id:'EV-035'}],
+      alternatives:[{cause_id:'app_db_unavailable',note:'app-db unavailable (rejected: it still answers its probe)',evidence_id:'EV-028'}]},
+    impact:['API availability down to 38% (−62 pp)','Worker job processing stopped (0 jobs/s)','Database connections at 100/100','User-facing error rate: 28.4%'],
+    investigation_state:[{label:'Evidence collection',value:'5/5',state:'done'},{label:'Fact extraction',value:'Done',state:'done'},{label:'Hypotheses analysis',value:'In progress',state:'active'},{label:'Root cause status',value:'Not confirmed',state:'idle'}],
+    next_step:{text:'Escalate to a human owner: no safe catalogue action exists for connection exhaustion.', meta:'LOW risk · no system change · policy allowed'},
+    options:[
+      {option_id:'escalate', label:'Escalate to a human owner', risk:'low', policy:'allowed', scope:'No system change', recommended:true, command:'notify owner (no command)', plan_hash:'sha256:5d2c…91ee', expires_in:'—', rollback:'Not needed'},
+      {option_id:'free_idle_connections', label:'Free idle app-db connections', risk:'low', policy:'proposed', scope:'Not in the action catalogue yet', recommended:false, command:'', plan_hash:'', expires_in:'', rollback:'—'},
+      {option_id:'restart_service', label:'Restart app-db service', risk:'high', policy:'denied', scope:'Databases are never restarted', recommended:false, command:'', plan_hash:'', expires_in:'', rollback:'—'}],
+    timeline:[{time:'19:10:51',kind:'alert',text:'DB connections reached 100%',evidence_id:'EV-034'},{time:'19:10:56',kind:'alert',text:'API errors increased',evidence_id:'EV-015'},{time:'19:10:57',kind:'alert',text:'Worker job failures detected',evidence_id:'EV-025'},{time:'19:14:41',kind:'alert',text:'Incident INC-0003 created (SEV-2)'},{time:'19:14:51',kind:'diagnosis',text:'Evidence collected (5 sources)'},{time:'19:14:51',kind:'diagnosis',text:'Diagnosis: connection exhaustion'},{time:'19:14:51',kind:'action',text:'Recommended action: escalate to a human'}],
+    evidence:[{evidence_id:'EV-034',source:'metric',summary:'app-db db_refused: 0 → 1 over 61 samples'},{evidence_id:'EV-015',source:'metric',summary:'api dependency_up:app-db: 1 → 0'},{evidence_id:'EV-024',source:'metric',summary:'worker dependency_up:app-db: 1 → 0'},{evidence_id:'EV-028',source:'metric',summary:'app-db cd_service_up = 1'},{evidence_id:'EV-025',source:'logs',summary:'worker: 100 lines, 100 error-level (text is untrusted)'},{evidence_id:'EV-035',source:'change',summary:'Change feed unavailable; deploys not observed'}],
+    log_lines:[{level:'error',text:'{"level":"error","service":"worker","msg":"job failed","error":"OperationalError"}'},{level:'error',text:'{"level":"error","service":"api","msg":"redis connection failed","error":"Timeout connecting to server"}'}],
+    verification_criteria:[{label:'Service reachability (api, worker, app-db)',value:'OK',passed:null},{label:'Connection utilization (< 80%)',value:'100%',passed:null},{label:'Error rate (< 5%)',value:'28.4%',passed:null},{label:'P95 latency (< 500 ms)',value:'4.2 s',passed:null},{label:'Queue processing (jobs/s > 0)',value:'0 jobs/s',passed:null},{label:'Stability window (5 min)',value:'0 / 5 min',passed:null}],
+    report:{status:'Draft', window:'19:10 – now (4 min)', root_cause:'Not confirmed (leading: connection exhaustion)', impact:'API 38% availability, worker stalled, 28.4% errors', recovery:'Pending execution & verification',
+      follow_ups:[{text:'Add connection pool alert (threshold 80%)',priority:'P0'},{text:'Identify and fix long-lived connections',priority:'P1'},{text:'Add runbook: connection exhaustion recovery',priority:'P2'}]}},
+  'INC-0002': {incident_id:'INC-0002', title:'worker stopped processing jobs', state:'remediating', severity:'medium', opened_at:'19:02:10Z', age:'12 min ago', pipeline_progress:7, pipeline_times:['19:02','19:02','19:02','19:02','19:02','19:02','19:02','19:02'], services:['worker'],
+    summary:'The worker process is down; its queue series disappeared at 19:02, which is how a dead worker looks here. A restart is proposed and waits for an approver.', classification:'Availability',
+    kpis:[
+      {kpi_id:'worker_availability', label:'Worker Availability', value:'0%', tone:'bad', delta:'−100 pp', direction:'down', delta_tone:'bad', trend:[100,100,100,100,0,0,0,0,0,0,0,0]},
+      {kpi_id:'job_throughput', label:'Job Throughput', value:'0 /s', tone:'bad', delta:'−24 /s', direction:'down', delta_tone:'bad', trend:[24,24,23,24,0,0,0,0,0,0,0,0]},
+      {kpi_id:'queue_series', label:'Queue Series', value:'absent', tone:'warn', delta:'worker exports it', direction:'flat', delta_tone:'warn', trend:[2,2,3,2,0,0,0,0,0,0,0,0]},
+      {kpi_id:'api_error_rate', label:'API Error Rate', value:'0.9%', tone:'ok', delta:'+0.1 pp', direction:'up', delta_tone:'ok', trend:[.8,.8,.9,.8,.9,.9,.9,.9,.9,.9,.9,.9]},
+      {kpi_id:'restarts', label:'Container Restarts', value:'1', tone:'warn', delta:'exit code 137', direction:'up', delta_tone:'warn', trend:[0,0,0,0,1,1,1,1,1,1,1,1]}],
+    top_cause:{cause_id:'worker_crash', ranking:.65, description:'The worker container exited and is not processing jobs.', basis:['evidence coverage 0.80','2 independent signal types (metric, log)','contradiction share 0.00'],
+      claims:[{claim_type:'observation',text:'cd_service_up for worker is 0 since 19:02:08',evidence_id:'EV-041'},{claim_type:'observation',text:'The queue length series is absent, not rising',evidence_id:'EV-043'},{claim_type:'observation',text:'Container exited with code 137',evidence_id:'EV-044'}],
+      unknowns:[{text:'Why the process exited is not visible from telemetry.',evidence_id:null}], alternatives:[{cause_id:'redis_unavailable',note:'redis unavailable (rejected: it answers its probe)',evidence_id:'EV-045'}]},
+    impact:['Background jobs are not processed','Queue is no longer drained','api is unaffected so far'],
+    investigation_state:[{label:'Evidence collection',value:'3/3',state:'done'},{label:'Fact extraction',value:'Done',state:'done'},{label:'Hypotheses analysis',value:'Done',state:'done'},{label:'Root cause status',value:'Not confirmed',state:'idle'}],
+    next_step:{text:'Approve restarting cd-worker. It is stateless and the restart is reversible.', meta:'MEDIUM risk · sandbox only · needs an approver'},
+    options:[
+      {option_id:'restart_service', label:'Restart worker container', risk:'medium', policy:'allowed', scope:'Sandbox only', recommended:true, command:'docker restart cd-worker', plan_hash:'sha256:7b1e…c40a', expires_in:'4 min', rollback:'Available'},
+      {option_id:'escalate', label:'Escalate to a human owner', risk:'low', policy:'allowed', scope:'No system change', recommended:false, command:'notify owner (no command)', plan_hash:'sha256:5d2c…91ee', expires_in:'—', rollback:'Not needed'}],
+    timeline:[{time:'19:02:08',kind:'alert',text:'worker down (cd_service_up = 0)',evidence_id:'EV-041'},{time:'19:02:10',kind:'alert',text:'Incident INC-0002 created (SEV-3)'},{time:'19:02:40',kind:'diagnosis',text:'Diagnosis: worker crash (ranking 0.65)'},{time:'19:02:41',kind:'action',text:'Plan proposed: restart cd-worker (medium risk)'},{time:'19:02:41',kind:'action',text:'Policy: allow with approval'}],
+    evidence:[{evidence_id:'EV-041',source:'metric',summary:'worker cd_service_up: 1 → 0'},{evidence_id:'EV-043',source:'metric',summary:'worker queue length series absent'},{evidence_id:'EV-044',source:'change',summary:'container cd-worker exited (137)'},{evidence_id:'EV-045',source:'metric',summary:'redis cd_service_up = 1'}],
+    log_lines:[{level:'info',text:'{"level":"info","service":"worker","msg":"worker starting"}'}],
+    verification_criteria:[{label:'worker answers its probe',value:'down',passed:null},{label:'Queue series present again',value:'absent',passed:null},{label:'Jobs processed (> 0 /s)',value:'0 /s',passed:null},{label:'Stability window (5 min)',value:'0 / 5 min',passed:null}],
+    report:{status:'Draft', window:'19:02 – now (12 min)', root_cause:'Not confirmed (leading: worker crash)', impact:'Background jobs stopped', recovery:'Pending approval', follow_ups:[{text:'Find out why the container exited (137)',priority:'P1'},{text:'Alert when the queue series is absent',priority:'P2'}]}},
+  'INC-0001': {incident_id:'INC-0001', title:'Redis outage', state:'closed', severity:'high', opened_at:'18:21:03Z', age:'closed', pipeline_progress:11, pipeline_times:['18:21','18:21','18:21','18:21','18:21','18:22','18:22','18:24','18:24','18:25','18:40'], services:['redis','api','worker'],
+    summary:'Redis was unreachable; api and worker failed on every cache and queue call. Restarting it restored service.', classification:'Availability',
+    kpis:[
+      {kpi_id:'error_rate', label:'Error Rate', value:'0.9%', tone:'ok', delta:'−96 pp', direction:'down', delta_tone:'ok', trend:[1,1,97,97,97,97,60,10,2,1,1,1]},
+      {kpi_id:'p95_latency', label:'P95 Latency', value:'0.3 s', tone:'ok', delta:'−2.1 s', direction:'down', delta_tone:'ok', trend:[.3,.3,2.4,2.4,2.4,2.4,1.2,.6,.3,.3,.3,.3]},
+      {kpi_id:'availability', label:'Availability', value:'99.8%', tone:'ok', delta:'+96 pp', direction:'up', delta_tone:'ok', trend:[100,100,3,3,3,3,40,90,99,99,99,100]},
+      {kpi_id:'queue_depth', label:'Queue Depth', value:'0', tone:'ok', delta:'drained', direction:'down', delta_tone:'ok', trend:[0,0,300,600,900,900,500,100,0,0,0,0]},
+      {kpi_id:'restarts', label:'Container Restarts', value:'1', tone:'ok', delta:'approved', direction:'up', delta_tone:'ok', trend:[0,0,0,0,0,0,1,1,1,1,1,1]}],
+    top_cause:{cause_id:'redis_unavailable', ranking:.82, description:'Redis stopped answering, so every dependent call failed.', basis:['evidence coverage 0.91','3 independent signal types','contradiction share 0.00'],
+      claims:[{claim_type:'observation',text:'redis cd_service_up = 0',evidence_id:'EV-005'},{claim_type:'observation',text:'api error ratio 0.97 after redis went down',evidence_id:'EV-009'}], unknowns:[], alternatives:[]},
+    impact:['api and worker failed on every cache and queue call','Recovered after approved restart'],
+    investigation_state:[{label:'Evidence collection',value:'2/2',state:'done'},{label:'Fact extraction',value:'Done',state:'done'},{label:'Hypotheses analysis',value:'Done',state:'done'},{label:'Root cause status',value:'Verified',state:'done'}],
+    next_step:{text:'Nothing to do. Write up follow-ups in the report.', meta:'Incident closed'},
+    options:[{option_id:'restart_service', label:'Restart redis container', risk:'medium', policy:'allowed', scope:'Sandbox only', recommended:true, command:'docker restart cd-redis', plan_hash:'sha256:a91f…02d8', expires_in:'—', rollback:'Available', resolution:'Approved by m.rao at 18:24:12Z'}],
+    timeline:[{time:'18:21:03',kind:'alert',text:'redis down',evidence_id:'EV-005'},{time:'18:21:30',kind:'diagnosis',text:'Diagnosis: redis unavailable (0.82)'},{time:'18:24:12',kind:'action',text:'Plan approved by m.rao'},{time:'18:24:20',kind:'action',text:'cd-redis restarted'},{time:'18:25:30',kind:'resolved',text:'Verification passed: 7 of 7 checks'}],
+    evidence:[{evidence_id:'EV-005',source:'metric',summary:'redis cd_service_up: 1 → 0'},{evidence_id:'EV-009',source:'metric',summary:'api error_ratio: 0.01 → 0.97'}], log_lines:[],
+    verification_criteria:[{label:'redis answers its probe',value:'OK',passed:true},{label:'Error rate (< 5%)',value:'0.9%',passed:true},{label:'P95 latency (< 500 ms)',value:'320 ms',passed:true},{label:'Queue drains',value:'0',passed:true},{label:'Stability window (5 min)',value:'5 / 5 min',passed:true}],
+    report:{status:'Final', window:'18:21 – 18:40 (19 min)', root_cause:'redis unavailable (verified)', impact:'api and worker down for 3 min', recovery:'Restart approved and verified', follow_ups:[{text:'Add redis memory alert',priority:'P2'}]}},
 };
 const auditEvents = [
   {time:'19:14:51',actor:'system',event_type:'diagnosis.created',incident_id:'INC-0003',hash:'a3f9…71c2'},{time:'19:14:41',actor:'system',event_type:'incident.opened',incident_id:'INC-0003',hash:'5be0…9a14'},
@@ -267,22 +377,41 @@ const roles = {
 };
 const permissionLabels = [['view_status','View status, incidents, diagnosis'],['view_logs','View raw evidence and logs'],['rerun_diagnosis','Re-run a diagnosis'],['decide_plans','Approve or reject plans'],['view_audit','View the audit log'],['manage_access','Manage roles and sessions']];
 const healthTone = {HEALTHY:'ok', DEGRADED:'warn', UNHEALTHY:'bad', UNKNOWN:'unknown'};
-const incidentTabs = ['summary','timeline','evidence','diagnosis','remediation','verification','report'];
-const stepLabels = ['Detected','Diagnosed','Acting','Verified'];
+const severityLabel = {high:'SEV-2 · Major', medium:'SEV-3 · Minor', low:'SEV-4 · Low'};
+const stateLabel = {diagnosed:'Investigating', remediating:'Awaiting approval', closed:'Recovered'};
+const pipelineLabels = ['Intake','Triage','Detect','Investigate','Diagnose','Plan','Policy check','Human approval','Sandbox recovery','Verify','Postmortem'];
+const timeRanges = ['Last 15 min','Last 30 min','Last 1 hour','Last 6 hours'];
 
 /* ---------- ui state ---------- */
-const ui = {view:'overview', incidentId:'INC-0003', tab:'summary', roleId:'operator', envMode:'rbac', filter:'all', menuOpen:false, nodeName:'app-db', pendingDecision:null, decisions:{}, rediagRunning:false};
+const ui = {view:'overview', incidentId:null, roleId:'operator', envMode:'rbac', filter:'all', popover:null, nodeName:'app-db', timeRange:'Last 30 min',
+  evidenceTab:'facts', commanderTab:'summary', selectedOptions:{}, pendingDecision:null, decisions:{}, owners:{}, focus:null, sectionFocus:null};
 const effectiveRoleId = () => ui.envMode === 'open' ? 'admin' : ui.roleId;
 const can = permission => roles[effectiveRoleId()].permissions.includes(permission);
 const escapeHtml = value => String(value).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const openIncidents = () => Object.values(incidents).filter(i => i.state !== 'closed');
+const activeIncident = () => openIncidents().sort((a, b) => (a.severity === 'high' ? 0 : 1) - (b.severity === 'high' ? 0 : 1) || b.incident_id.localeCompare(a.incident_id))[0] || null;
+const currentIncident = () => ui.view === 'incident' ? incidents[ui.incidentId] : activeIncident();
+const selectedOption = incident => incident.options.find(o => o.option_id === (ui.selectedOptions[incident.incident_id] || (incident.options.find(x => x.recommended) || incident.options[0]).option_id));
+const serviceByName = name => services.find(s => s.name === name);
+const diagnosticStrength = ranking => ranking >= .7 ? ['HIGH','ok'] : ranking >= .4 ? ['MEDIUM','warn'] : ['LOW','bad'];
 
 /* ---------- small renderers ---------- */
 const iconPaths = {
-  lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
-  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
-  contrast:'<circle cx="12" cy="12" r="9"/><path d="M12 3v18" /><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/>',
-  chevron:'<path d="M6 9l6 6 6-6"/>',
-  back:'<path d="M15 6l-6 6 6 6"/>',
+  lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>', user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  contrast:'<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/>', chevron:'<path d="M6 9l6 6 6-6"/>', back:'<path d="M15 6l-6 6 6 6"/>',
+  pulse:'<path d="M3 12h4l2.5-6 4 12 2.5-6H21"/>', home:'<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>',
+  topology:'<circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="8" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M8 7l8 1M7.5 8l3 8M16.5 10l-3 6"/>',
+  alert:'<circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/>', bars:'<path d="M5 20V10M12 20V4M19 20v-7"/>', search:'<circle cx="11" cy="11" r="6.5"/><path d="M16 16l5 5"/>',
+  bolt:'<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>', file:'<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>',
+  clipboard:'<rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12h6M9 16h4"/>', users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 5a3.5 3.5 0 0 1 0 6M18 14a6.5 6.5 0 0 1 3.5 6"/>',
+  bell:'<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/>', calendar:'<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/>',
+  cube:'<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/>', triangle:'<path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/>',
+  external:'<path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6"/>', check:'<path d="M5 12.5l4.5 4.5L19 7"/>', clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  shield:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>', info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.5"/>',
+  signal:'<circle cx="12" cy="12" r="2"/><path d="M7.5 7.5a6 6 0 0 0 0 9M16.5 7.5a6 6 0 0 1 0 9M4.5 4.5a10 10 0 0 0 0 15M19.5 4.5a10 10 0 0 1 0 15"/>',
+  rules:'<path d="M5 6h14M5 12h14M5 18h9"/>', gear:'<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>',
+  up:'<path d="M12 19V5M6 11l6-6 6 6"/>', down:'<path d="M12 5v14M6 13l6 6 6-6"/>', flat:'<path d="M5 12h14"/>', play:'<path d="M7 4l13 8-13 8z"/>', x:'<path d="M6 6l12 12M18 6L6 18"/>',
+  flask:'<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/>', help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17v.5"/>',
 };
 const icon = name => `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${iconPaths[name]}</svg>`;
 const pill = (tone, text, extraClass = '') => `<span class="pill ${extraClass}" data-tone="${tone}">${text}</span>`;
@@ -295,7 +424,7 @@ function incidentStatePill(state) {
 function showToast(text) {
   const element = document.getElementById('toast');
   element.textContent = text; element.hidden = false;
-  clearTimeout(showToast.timer); showToast.timer = setTimeout(() => { element.hidden = true; }, 3200);
+  clearTimeout(showToast.timer); showToast.timer = setTimeout(() => { element.hidden = true; }, 3400);
 }
 function renderSparkline(trend, tone) {
   const width = 240, height = 34, max = Math.max(...trend, 1), min = Math.min(...trend), span = max - min || 1;
@@ -306,203 +435,239 @@ function renderSparkline(trend, tone) {
 }
 const lockHint = (permission, reason) => can(permission) ? '' : `<div class="lock-hint">${icon('lock')}<span>${reason} Your role: <b>${roles[effectiveRoleId()].label}</b>.</span></div>`;
 const factsList = (rows, numeric = false) => `<dl class="facts ${numeric ? 'facts--numeric' : ''}">${rows.map(([term, value]) => `<dt class="facts__term">${term}</dt><dd class="facts__value">${value}</dd>`).join('')}</dl>`;
+const evidenceLink = id => id ? `<a href="#" class="text-mono" data-action="show-evidence" data-evidence-id="${id}">${id}</a>` : '<span class="text-faint">—</span>';
+const panelTitle = (iconName, text) => `<h2 class="panel__title">${icon(iconName)}${text}</h2>`;
 
-/* ---------- views ---------- */
-function renderOverview() {
-  const openIncidents = Object.values(incidents).filter(i => i.state !== 'closed');
-  const needsAttention = openIncidents.filter(i => i.state === 'remediating' || i.severity === 'high');
-  const countOf = healthState => services.filter(s => s.health_state === healthState).length;
-  return `<div class="page-header"><div><h1>Overview</h1><p class="page-header__lead">What is broken, what Cloud Doctor is doing about it, and what needs you.</p></div><span class="tag">sample data from the sandbox run</span></div>
-  <div class="grid grid--stats section-gap">
-    <div class="panel stat-tile" ${openIncidents.length ? 'data-tone="bad"' : ''}><span class="stat-tile__value">${openIncidents.length}</span><span class="stat-tile__label">open incidents</span></div>
-    <div class="panel stat-tile"><span class="stat-tile__value" data-tone="bad">${countOf('UNHEALTHY')}</span><span class="stat-tile__label">services unhealthy</span></div>
-    <div class="panel stat-tile"><span class="stat-tile__value" data-tone="warn">${countOf('DEGRADED')}</span><span class="stat-tile__label">degraded</span></div>
-    <div class="panel stat-tile"><span class="stat-tile__value" data-tone="ok">${countOf('HEALTHY')}</span><span class="stat-tile__label">healthy</span></div>
-    <div class="panel stat-tile"><span class="stat-tile__value">1</span><span class="stat-tile__label">plan waiting for approval</span></div>
-  </div>
-  <div class="layout-split section-gap">
-    <section class="panel"><div class="panel__header"><h2>Needs attention</h2><span class="text-muted">${needsAttention.length} items, newest first</span></div>
-      ${needsAttention.map(i => `<button class="attention-item" data-action="open-incident" data-incident-id="${i.incident_id}"><span class="attention-item__severity" data-severity="${i.severity}"></span>
-        <span><b>${escapeHtml(i.title)}</b><br><span class="text-muted">${i.incident_id} · ${i.services.join(', ')} · opened ${i.age} ago · ${escapeHtml(i.top_cause.cause_id)}</span></span>
-        <span class="attention-item__action">${i.state === 'remediating' ? (can('decide_plans') ? pill('warn', 'Review &amp; approve') : pill('unknown', 'Awaiting an approver')) : pill('bad', 'Decide next step')}</span></button>`).join('') || '<div class="panel__body text-muted">Nothing needs you.</div>'}
-    </section>
-    <aside class="panel panel__body stack"><h2>Automation</h2><div class="cluster">${pill('ok', 'Detecting')} ${pill('accent', 'Recommend-only')}</div>
-      <p class="text-muted">Cloud Doctor proposes actions. Policy checks every plan, and anything of medium risk or above waits for an approver.</p>
-      ${factsList([['Policy','Layer 1 active · Layer 2 off'],['Actuator','not connected'],['LLM','off (deterministic)']])}</aside>
-  </div>
-  <div class="page-header"><h2>Services</h2><span class="text-muted">Select a service to see dependencies and incidents</span></div>
-  <div class="grid grid--cards">${services.map(s => `<button class="panel service-card" data-tone="${healthTone[s.health_state]}" data-action="open-service" data-service-name="${s.name}">
-    <div class="cluster cluster--between"><span class="service-card__name">${s.name}</span>${healthPill(s.health_state)}</div><div class="text-muted">${s.kind.replace('_', ' ')}</div>
-    <div class="stack stack--tight">${factsList([['Availability', s.availability], ['Latency', s.latency], ['Load', s.load], ...(s.incident_id ? [['Incident', `<a href="#" data-action="open-incident" data-incident-id="${s.incident_id}">${s.incident_id}</a>`]] : [])], true)}</div>
-    ${renderSparkline(s.trend, healthTone[s.health_state])}</button>`).join('')}</div>`;
+/* ---------- command-centre panels ---------- */
+function renderIncidentBanner(incident) {
+  const owner = ui.owners[incident.incident_id], closed = incident.state === 'closed';
+  const stateOf = index => index < incident.pipeline_progress ? 'done' : index === incident.pipeline_progress ? 'current' : 'pending';
+  return `<section class="incident-banner" data-state="${closed ? 'closed' : 'active'}">
+    <div class="cluster cluster--between"><div>
+      <div class="incident-banner__eyebrow">${icon(closed ? 'check' : 'triangle')}${closed ? 'Closed incident' : 'Active incident'}<span class="incident-banner__id">${incident.incident_id}</span></div>
+      <h1 class="incident-banner__title">${escapeHtml(incident.title)}</h1></div>
+      <div class="incident-banner__actions"><button class="button button--outline" data-action="take-ownership" ${owner || closed ? 'disabled' : ''}>${icon('user')}${owner ? 'You own this' : 'Take ownership'}</button>
+      <button class="button" data-action="open-incident" data-incident-id="${incident.incident_id}">${icon('file')}View incident</button>
+      <button class="button button--primary" data-action="open-commander">${icon('external')}Open commander</button></div></div>
+    <div class="incident-banner__meta"><span class="severity-tag">${severityLabel[incident.severity]}</span><span>${icon('clock')} Detected: ${incident.opened_at.slice(0, 8)} (${incident.age})</span>
+      <span class="cluster">Affected: ${incident.services.map(n => `<button class="service-chip" data-tone="${healthTone[serviceByName(n).health_state]}" data-action="open-service" data-service-name="${n}"><span class="service-chip__dot"></span>${n}</button>`).join('')}</span>
+      <span>State: ${pill('accent', stateLabel[incident.state], 'pill--plain')}</span></div>
+    <ol class="pipeline">${pipelineLabels.map((label, i) => `<li class="pipeline__step" data-state="${stateOf(i)}">${label}<span class="pipeline__time">${incident.pipeline_times[i] || '—'}</span></li>`).join('')}</ol></section>`;
+}
+function renderKpiStrip(incident) {
+  return `<div class="kpi-strip">${incident.kpis.map(k => `<div class="panel kpi-card" data-tone="${k.tone}"><span class="kpi-card__label">${k.label}${icon('info')}</span><span class="kpi-card__value">${k.value}</span>
+    <span class="kpi-card__delta" data-tone="${k.delta_tone}">${icon(k.direction)}${k.delta}</span>${renderSparkline(k.trend, k.delta_tone)}</div>`).join('')}</div>`;
+}
+function renderTimelinePanel(incident) {
+  return `<section class="panel"><div class="panel__header">${panelTitle('clock', 'Incident Timeline <span class="text-muted">(UTC)</span>')}<button class="link-button" data-action="select-commander-tab" data-commander-tab="activity">View full timeline →</button></div>
+  <div class="panel__body"><ol class="timeline">${incident.timeline.map(e => `<li class="timeline__item"><span class="timeline__marker" data-kind="${e.kind}"></span><time class="timeline__time">${e.time}</time><span>${escapeHtml(e.text)}${e.evidence_id ? ` (${evidenceLink(e.evidence_id)})` : ''}</span></li>`).join('')}</ol></div></section>`;
+}
+function renderTopologySvg(interactive) {
+  const positions = {loadgen:[10,20], api:[190,20], redis:[370,20], worker:[190,140], 'app-db':[370,140]};
+  const edges = [['loadgen','api'],['api','redis'],['api','app-db'],['worker','redis'],['worker','app-db']];
+  const isFailing = (from, to) => ['UNHEALTHY','DEGRADED'].includes(serviceByName(to).health_state) && serviceByName(from).health_state === 'UNHEALTHY';
+  const path = (from, to) => {
+    const [x1, y1] = positions[from], [x2, y2] = positions[to];
+    if (y1 === y2) return `M${x1 + 140} ${y1 + 30}L${x2 - 2} ${y2 + 30}`;
+    if (x1 === x2) return `M${x1 + 70} ${y1 + 60}L${x2 + 70} ${y2 - 2}`;
+    return `M${x1 + 140} ${y1 + (y2 > y1 ? 45 : 15)}L${x2 - 2} ${y2 + (y2 > y1 ? 15 : 45)}`;
+  };
+  return `<svg class="topology" viewBox="0 0 520 215" role="img" aria-label="service dependency graph">
+    <defs><marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path class="topology__arrow" d="M0 0L8 4L0 8z"/></marker></defs>
+    ${edges.map(([from, to]) => `<path class="topology__edge ${isFailing(from, to) ? 'topology__edge--failing' : ''}" marker-end="url(#arrow)" d="${path(from, to)}"/>`).join('')}
+    ${services.map(s => { const [x, y] = positions[s.name]; return `<g class="topology__node" data-action="${interactive ? 'select-node' : 'open-service'}" data-service-name="${s.name}" data-tone="${healthTone[s.health_state]}" data-selected="${interactive && ui.nodeName === s.name}" tabindex="0" role="button" aria-label="${s.name} ${s.health_state}">
+      <rect x="${x}" y="${y}" width="140" height="60" rx="10"/><circle class="topology__dot" cx="${x + 16}" cy="${y + 18}" r="5"/><text class="topology__label" x="${x + 28}" y="${y + 22}">${s.name}</text>
+      <text class="topology__state" x="${x + 14}" y="${y + 38}">${{HEALTHY:'Healthy',DEGRADED:'Degraded',UNHEALTHY:'Unhealthy',UNKNOWN:'Unknown'}[s.health_state]}</text><text class="topology__detail" x="${x + 14}" y="${y + 52}">${s.health_state === 'HEALTHY' ? '' : s.detail}</text></g>`; }).join('')}</svg>`;
+}
+const renderTopologyPanel = () => `<section class="panel"><div class="panel__header">${panelTitle('topology', 'Service Topology <span class="text-muted">(live dependencies)</span>')}<button class="link-button" data-action="open-view" data-view="topology">Expand ↗</button></div><div class="panel__body">${renderTopologySvg(false)}</div></section>`;
+function renderEvidencePanel(incident) {
+  const cause = incident.top_cause, [strength, strengthTone] = diagnosticStrength(cause.ranking);
+  const facts = cause.claims.filter(c => c.claim_type === 'observation'), inferences = cause.claims.filter(c => c.claim_type === 'inference');
+  const row = (tag, tagTone, iconName, iconTone, text, evidenceId) => `<li class="evidence-item"><span class="evidence-item__icon" data-tone="${iconTone}">${icon(iconName)}</span><span class="tag" data-tone="${tagTone}">${tag}</span><span>${escapeHtml(text)}</span>${evidenceLink(evidenceId)}</li>`;
+  const hypothesisRow = row('HYPOTHESIS', 'warn', 'help', 'warn', cause.description, cause.claims[0] && cause.claims[0].evidence_id);
+  const altRows = cause.alternatives.map(a => row('ALT', 'accent', 'rules', 'accent', a.note, a.evidence_id)), unknownRows = cause.unknowns.map(u => row('UNKNOWN', '', 'help', '', u.text, u.evidence_id));
+  const tabLists = {facts: facts.map(f => row('FACT', 'ok', 'check', 'ok', f.text, f.evidence_id)), hypotheses: [hypothesisRow, ...inferences.map(c => row('INFERENCE', 'warn', 'help', 'warn', c.text, c.evidence_id))], alternatives: altRows, unknowns: unknownRows};
+  const tabs = [['facts', 'Confirmed facts', 'check', facts.length], ['hypotheses', 'Hypotheses', 'help', 1 + inferences.length], ['alternatives', 'Alternatives', 'rules', altRows.length], ['unknowns', 'Unknowns', 'help', unknownRows.length]];
+  return `<section class="panel scroll-target" id="section-evidence"><div class="panel__header">${panelTitle('search', 'Evidence &amp; Investigation')}
+    <span class="cluster">${pill('accent', 'Rule-based · every claim cites evidence', 'pill--plain')}<span class="text-muted">Diagnostic strength:</span>${pill(strengthTone, strength, 'pill--plain')}<span class="text-muted">Ranking: ${cause.ranking.toFixed(2)} (ordering aid, not a probability)</span></span></div>
+    <div class="panel__body"><div class="tabs" role="tablist">${tabs.map(([id, label, iconName, count]) => `<button class="tabs__tab" role="tab" data-action="select-evidence-tab" data-evidence-tab="${id}" aria-selected="${ui.evidenceTab === id}">${icon(iconName)}${label} (${count})</button>`).join('')}</div></div>
+    <div class="evidence-grid"><ul class="evidence-list">${tabLists[ui.evidenceTab].join('') || '<li class="evidence-item"><span></span><span></span><span class="text-muted">Nothing recorded here.</span></li>'}</ul>
+      <ul class="evidence-list">${[hypothesisRow, ...altRows, ...unknownRows].join('')}</ul></div>
+    ${incident.log_lines.length ? `<div class="panel__body stack"><div class="cluster">${pill('warn', 'untrusted log text')}<span class="text-muted text-small">Shown as plain text only.</span></div>${can('view_logs') ? `<div class="log-view">${incident.log_lines.map(l => `<div class="log-view__line" data-level="${l.level}">${escapeHtml(l.text)}</div>`).join('')}</div>` : lockHint('view_logs', 'Raw logs need the Operator role or above.')}</div>` : ''}</section>`;
+}
+function renderRemediationPanel(incident) {
+  const chosen = selectedOption(incident), resolution = ui.decisions[incident.incident_id] || chosen.resolution, pending = ui.pendingDecision;
+  const policyText = {allowed:['ALLOWED','check'], denied:['DENIED','x'], proposed:['PROPOSED','info']};
+  const runnable = chosen.policy === 'allowed' && !resolution;
+  const confirmBox = pending && can('decide_plans') ? `<div class="stack stack--tight"><div class="command-line">$ ${escapeHtml(chosen.command || '—')}</div><div class="notice">Your decision is bound to plan <span class="text-mono">${chosen.plan_hash}</span>. If the plan changes, the approval is void.</div>
+    <label for="decision-reason" class="text-muted">Reason for ${pending === 'approve' ? 'approving' : 'rejecting'} (saved in the audit log)</label><textarea class="textarea" id="decision-reason" placeholder="e.g. worker is stateless, queue is empty"></textarea>
+    <div class="cluster"><button class="button ${pending === 'approve' ? 'button--primary' : 'button--danger'}" data-action="submit-decision" data-decision="${pending}">Confirm ${pending}</button><button class="button" data-action="cancel-decision">Cancel</button></div></div>` : '';
+  return `<section class="panel scroll-target" id="section-remediation"><div class="panel__header">${panelTitle('bolt', 'Safe Remediation')}</div><div class="panel__body stack">
+    <div role="radiogroup" aria-label="Recommended action"><div class="option-head"><span></span><span>Recommended action</span><span>Risk</span><span>Policy</span></div>
+    ${incident.options.map(o => `<button class="option-row" role="radio" aria-checked="${o.option_id === chosen.option_id}" data-policy="${o.policy}" data-action="select-option" data-option-id="${o.option_id}"><span class="radio" data-checked="${o.option_id === chosen.option_id}"></span><span>${o.label}${o.recommended ? ' ' + pill('accent', 'recommended', 'pill--plain') : ''}<span class="option-row__scope">${icon('flask')}${o.scope}</span></span>
+      <span class="tag" data-tone="${{low:'ok',medium:'warn',high:'bad'}[o.risk]}">${o.risk.toUpperCase()}</span><span class="policy-result" data-policy="${o.policy}">${icon(policyText[o.policy][1])}${policyText[o.policy][0]}</span></button>`).join('')}</div>
+    ${confirmBox}
+    <div class="remediation-footer"><div class="remediation-footer__facts"><span>Requires: <b>Human approval</b></span><span>Policy: Layer 1 (inv-0.1) · Layer 2 off</span><span>Rollback: ${chosen.rollback}</span>${chosen.command ? `<span class="text-mono">${escapeHtml(chosen.command)}${chosen.expires_in !== '—' ? ' · expires ' + chosen.expires_in : ''}</span>` : ''}</div>
+      <div class="stack stack--tight">${resolution ? pill('ok', escapeHtml(resolution))
+        : can('decide_plans') ? `<div class="cluster"><button class="button button--primary" data-action="start-decision" data-decision="approve" ${runnable ? '' : 'disabled'}>${icon('play')}Approve &amp; Execute</button><button class="button button--danger" data-action="start-decision" data-decision="reject" ${chosen.policy === 'allowed' ? '' : 'disabled'}>Reject</button></div>`
+        : lockHint('decide_plans', 'Only approvers and admins can approve or reject plans.')}
+        ${!resolution && can('decide_plans') && !runnable ? `<span class="text-small">${chosen.policy === 'denied' ? 'Policy denies this action.' : 'Not in the action catalogue yet.'}</span>` : ''}</div></div></div></section>`;
+}
+function renderVerificationPanel(incident) {
+  const resolution = ui.decisions[incident.incident_id];
+  const header = incident.state === 'closed' ? ['ok', 'Passed'] : resolution && resolution.startsWith('Approved') ? ['ok', 'Ready to verify'] : ['unknown', 'Waiting for an action'];
+  return `<section class="panel"><div class="panel__header">${panelTitle('shield', 'Recovery Verification')}${pill(header[0], header[1])}</div>
+  <div class="panel__body stack"><ul class="check-list">${incident.verification_criteria.map(c => `<li class="check-list__item" data-result="${c.passed === true ? 'pass' : c.passed === false ? 'fail' : 'pending'}"><span class="check-list__mark">${c.passed === true ? icon('check') : ''}</span><span>${c.label}</span><span class="check-list__value">${c.value}</span></li>`).join('')}</ul>
+  ${incident.state === 'closed' ? '' : '<p class="text-muted text-small">Checks run after an action completes. The values shown are current readings, not results.</p>'}</div></section>`;
+}
+function renderReportPanel(incident) {
+  const r = incident.report;
+  return `<section class="panel scroll-target" id="section-report"><div class="panel__header">${panelTitle('file', 'Post-Incident / Report')}${pill('accent', r.status, 'pill--plain')}</div>
+  <div class="panel__body stack"><dl class="stack stack--tight">${[['Timeline:', r.window], ['Root cause:', r.root_cause], ['Impact:', r.impact], ['Recovery:', r.recovery]].map(([t, v]) => `<div class="report-line"><dt>${t}</dt><dd>${escapeHtml(v)}</dd></div>`).join('')}</dl>
+  <div class="cluster cluster--between"><h3>Follow-up actions (${r.follow_ups.length})</h3><button class="link-button" data-action="copy-report">Copy as Markdown</button></div>
+  <ul class="followups">${r.follow_ups.map(f => `<li class="followups__item"><span class="followups__box"></span><span>${escapeHtml(f.text)}</span><span class="tag" data-tone="${{P0:'bad',P1:'warn',P2:'accent'}[f.priority]}">${f.priority}</span></li>`).join('')}</ul></div></section>`;
+}
+function renderCommander(incident) {
+  const tab = ui.commanderTab, recent = auditEvents.filter(a => a.incident_id === incident.incident_id).slice(0, tab === 'activity' ? 8 : 3);
+  const sections = {
+    summary: `<section class="panel commander-section"><h3>${icon('file')}Incident Summary</h3><p class="text-muted text-small">${escapeHtml(incident.summary)}</p>
+      <div class="segment"><div class="segment__cell" data-tone="bad">Severity<b>${severityLabel[incident.severity].split(' · ')[0]}</b></div><div class="segment__cell">Classification<b>${incident.classification}</b></div><div class="segment__cell" data-tone="accent">State<b>${stateLabel[incident.state]}</b></div></div></section>`,
+    impact: `<section class="panel commander-section"><h3>${icon('gear')}Impact</h3><ul class="list-plain text-small">${incident.impact.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul></section>`,
+    state: `<section class="panel commander-section"><h3>${icon('search')}Investigation State</h3><ul class="state-list">${incident.investigation_state.map(s => `<li class="state-list__item" data-state="${s.state}"><span class="state-list__mark"></span><span>${s.label}</span><span class="state-list__value">${s.value}</span></li>`).join('')}</ul></section>`,
+    next: `<section class="next-step"><span class="next-step__title">${icon('bolt')}Next Recommended Step</span><span>${escapeHtml(incident.next_step.text)}</span><span class="text-muted">${incident.next_step.meta}</span></section>`,
+    audit: `<section class="panel commander-section"><div class="cluster cluster--between"><h3>${icon('clipboard')}Recent Actions (Audit)</h3><button class="link-button" data-action="open-view" data-view="audit">View all →</button></div>
+      <ul class="audit-list">${recent.map(a => `<li class="audit-list__item"><span class="audit-list__time">${a.time}</span><span>${a.event_type}</span></li>`).join('') || '<li class="text-muted">No audit events yet.</li>'}</ul></section>`};
+  const byTab = {summary:['summary','impact','state','next','audit'], investigation:['state','next'], actions:['next','audit'], activity:['audit']};
+  return `<aside class="commander" id="commander"><div class="commander__header"><span class="commander__title">${icon('signal')}Incident Commander</span>${pill('accent', 'Rule-based', 'pill--plain')}</div>
+    <div class="tabs" role="tablist">${['summary','investigation','actions','activity'].map(t => `<button class="tabs__tab" role="tab" data-action="select-commander-tab" data-commander-tab="${t}" aria-selected="${tab === t}">${t[0].toUpperCase() + t.slice(1)}</button>`).join('')}</div>
+    ${byTab[tab].map(k => sections[k]).join('')}</aside>`;
+}
+function renderCommandCenter(incident) {
+  if (!incident) return `<div class="page"><section class="incident-banner" data-state="calm"><h1>All clear</h1><p class="text-muted">No open incidents. Cloud Doctor is watching ${services.length} services.</p></section></div>`;
+  return `<div class="workspace"><div class="workspace__main">${ui.view === 'incident' ? `<a href="#" data-action="open-view" data-view="incidents">${icon('back')} All incidents</a>` : ''}
+    ${renderIncidentBanner(incident)}${renderKpiStrip(incident)}<div class="row-split">${renderTimelinePanel(incident)}${renderTopologyPanel()}</div>${renderEvidencePanel(incident)}
+    <div class="row-triple">${renderRemediationPanel(incident)}${renderVerificationPanel(incident)}${renderReportPanel(incident)}</div></div>${renderCommander(incident)}</div>`;
 }
 
-function renderTopology() {
-  const positions = {loadgen:[110,70], api:[330,70], worker:[330,210], redis:[560,50], 'app-db':[560,230]};
-  const edges = [['loadgen','api'],['api','redis'],['api','app-db'],['worker','redis'],['worker','app-db']];
-  const find = name => services.find(s => s.name === name);
-  const isFailing = (from, to) => ['UNHEALTHY','DEGRADED'].includes(find(to).health_state) && find(from).health_state === 'UNHEALTHY';
-  const node = find(ui.nodeName);
-  return `<div class="page-header"><div><h1>Topology</h1><p class="page-header__lead">Who depends on whom. A dashed red line is a dependency that is failing right now.</p></div></div>
-  <div class="layout-split"><section class="panel panel__body"><svg class="topology" viewBox="0 0 700 300" role="img" aria-label="service dependency graph">
-    <defs><marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path class="topology__arrow" d="M0 0L8 4L0 8z"/></marker></defs>
-    ${edges.map(([from, to]) => `<path class="topology__edge ${isFailing(from, to) ? 'topology__edge--failing' : ''}" marker-end="url(#arrow)" d="M${positions[from][0] + 60} ${positions[from][1] + 22}L${positions[to][0] - 2} ${positions[to][1] + 22}"/>`).join('')}
-    ${services.map(s => `<g class="topology__node" data-action="select-node" data-service-name="${s.name}" data-tone="${healthTone[s.health_state]}" data-selected="${ui.nodeName === s.name}" tabindex="0" role="button" aria-label="${s.name} ${s.health_state}">
-      <rect x="${positions[s.name][0]}" y="${positions[s.name][1]}" width="120" height="46" rx="10"/><text class="topology__label" x="${positions[s.name][0] + 14}" y="${positions[s.name][1] + 20}">${s.name}</text><text class="topology__sublabel" x="${positions[s.name][0] + 14}" y="${positions[s.name][1] + 36}">${s.health_state.toLowerCase()}</text></g>`).join('')}
-  </svg></section>
+/* ---------- other pages ---------- */
+const renderObservability = () => `<div class="page"><div class="page-header"><div><h1>Observability</h1><p class="page-header__lead">Health, latency and load for every service.</p></div><span class="tag">sample data</span></div>
+  <div class="grid grid--cards">${services.map(s => `<button class="panel service-card" data-tone="${healthTone[s.health_state]}" data-action="open-service" data-service-name="${s.name}"><div class="cluster cluster--between"><span class="service-card__name">${s.name}</span>${healthPill(s.health_state)}</div><div class="text-muted">${s.kind.replace('_', ' ')}</div>
+    <div class="stack stack--tight">${factsList([['Availability', s.availability], ['Latency', s.latency], ['Load', s.load]], true)}</div>${renderSparkline(s.trend, healthTone[s.health_state])}</button>`).join('')}</div></div>`;
+function renderTopologyPage() {
+  const node = serviceByName(ui.nodeName);
+  return `<div class="page"><div class="page-header"><div><h1>Topology</h1><p class="page-header__lead">Who depends on whom. A dashed red line is a dependency that is failing right now.</p></div></div>
+  <div class="layout-split"><section class="panel panel__body">${renderTopologySvg(true)}</section>
   <aside class="panel panel__body stack"><div class="cluster cluster--between"><h2>${node.name}</h2>${healthPill(node.health_state)}</div><span class="text-muted">${node.kind.replace('_', ' ')}</span>
     ${factsList([['Availability', node.availability],['Latency', node.latency],['Load', node.load],['Depends on', node.depends_on.join(', ') || 'nothing'],['Used by', services.filter(s => s.depends_on.includes(node.name)).map(s => s.name).join(', ') || 'nothing']])}
-    ${renderSparkline(node.trend, healthTone[node.health_state])}
-    ${node.incident_id ? `<button class="button button--primary" data-action="open-incident" data-incident-id="${node.incident_id}">Open ${node.incident_id}</button>` : '<span class="text-muted">No open incident.</span>'}</aside></div>`;
+    ${renderSparkline(node.trend, healthTone[node.health_state])}${node.incident_id ? `<button class="button button--primary" data-action="open-incident" data-incident-id="${node.incident_id}">Open ${node.incident_id}</button>` : '<span class="text-muted">No open incident.</span>'}</aside></div></div>`;
 }
-
 function renderIncidentList() {
   const filtered = Object.values(incidents).filter(i => ui.filter === 'all' || (ui.filter === 'open' ? i.state !== 'closed' : i.state === 'closed'));
-  return `<div class="page-header"><div><h1>Incidents</h1><p class="page-header__lead">One row per problem. Related failures are grouped, so one cause is one incident.</p></div>
+  return `<div class="page"><div class="page-header"><div><h1>Incidents</h1><p class="page-header__lead">One row per problem. Related failures are grouped, so one cause is one incident.</p></div>
   <div class="filter-group" role="group" aria-label="filter">${[['all','All'],['open','Open'],['closed','Closed']].map(([id, label]) => `<button class="filter-group__option" data-action="set-filter" data-filter="${id}" aria-pressed="${ui.filter === id}">${label}</button>`).join('')}</div></div>
   <section class="panel"><div class="incident-row incident-row--head"><span>ID</span><span>Problem</span><span>Status</span><span>Likely cause</span><span>Opened</span></div>
   ${filtered.map(i => `<button class="incident-row" data-action="open-incident" data-incident-id="${i.incident_id}"><span class="text-mono">${i.incident_id}</span><span><b>${escapeHtml(i.title)}</b><br><span class="text-muted">${i.services.join(' · ')}</span></span><span>${incidentStatePill(i.state)}</span><span class="text-mono text-muted">${i.top_cause.cause_id}<br>ranking ${i.top_cause.ranking.toFixed(2)}</span><span class="text-muted">${i.opened_at}<br>${i.age}</span></button>`).join('')}</section>
-  <p class="prototype-note">Design note: INC-0003 covers api, worker and app-db as one incident. The running backend currently opens one per dependent; this is the target behaviour.</p>`;
+  <p class="prototype-note">Design note: INC-0003 covers api, worker and app-db as one incident. The running backend currently opens one per dependent; this is the target behaviour.</p></div>`;
 }
-
-function renderStepper(incident) {
-  const notes = ['rule dependency_down', 'ranking ' + incident.top_cause.ranking.toFixed(2), incident.state === 'closed' ? 'restart approved' : incident.state === 'remediating' ? 'waiting for approval' : 'needs a human', incident.verification ? '7 of 7 checks' : 'not started'];
-  const stateOf = index => index < incident.progress ? 'done' : index === incident.progress ? (incident.state === 'closed' ? 'current' : 'blocked') : 'pending';
-  return `<ol class="stepper">${stepLabels.map((label, index) => `<li class="stepper__step" data-state="${stateOf(index)}">${label}<span class="stepper__note">${notes[index]}</span></li>`).join('')}</ol>`;
-}
-
-function renderDecisionCard(incident) {
-  const resolution = ui.decisions[incident.incident_id] || (incident.plan && incident.plan.resolution);
-  if (resolution) return `<section class="panel panel--decision panel__body stack" data-state="resolved"><h2>Decision</h2>${pill('ok', escapeHtml(resolution))}</section>`;
-  if (!incident.plan) return `<section class="panel panel--decision panel__body stack"><h2>Needs a human</h2><p>${escapeHtml(incident.recommended_action.reason)}</p>
-    <div class="notice notice--warn">Suggested by the evidence: free or raise app-db connections (find the client holding them), then Cloud Doctor verifies recovery.</div>
-    <div class="cluster"><button class="button button--primary" data-action="take-ownership">Take ownership</button><button class="button" data-action="select-tab" data-tab="diagnosis">Read diagnosis</button></div></section>`;
-  const plan = incident.plan, pending = ui.pendingDecision;
-  return `<section class="panel panel--decision panel__body stack"><div class="cluster cluster--between"><h2>Approve this action?</h2>${pill('warn', 'risk ' + plan.risk)}</div>
-    <div class="command-line">$ ${escapeHtml(plan.command)}</div>
-    ${factsList([['Target', plan.target], ['Policy', `Layer 1 ${plan.layer1}<br>Layer 2 ${plan.layer2}`], ['Plan hash', `<span class="text-mono">${plan.plan_hash}</span>`], ['Expires in', plan.expires_in]])}
-    <div class="notice">Your decision is bound to this exact plan. If the plan changes, the approval is void.</div>
-    ${can('decide_plans') ? (pending
-      ? `<label for="decision-reason" class="text-muted">Reason for ${pending === 'approve' ? 'approving' : 'rejecting'} (saved in the audit log)</label><textarea class="textarea" id="decision-reason" placeholder="e.g. worker is stateless, queue is empty"></textarea>
-         <div class="cluster"><button class="button ${pending === 'approve' ? 'button--primary' : 'button--danger'}" data-action="submit-decision" data-decision="${pending}">Confirm ${pending}</button><button class="button" data-action="cancel-decision">Cancel</button></div>`
-      : `<div class="cluster"><button class="button button--primary" data-action="start-decision" data-decision="approve">Approve</button><button class="button button--danger" data-action="start-decision" data-decision="reject">Reject</button></div>`)
-      : lockHint('decide_plans', 'Only approvers and admins can approve or reject plans.')}</section>`;
-}
-
-const renderTimeline = events => `<ol class="timeline">${events.map(e => `<li class="timeline__item"><time class="timeline__time">${e.time}</time><span class="timeline__marker" data-kind="${e.kind}"></span><span>${escapeHtml(e.text)}</span></li>`).join('')}</ol>`;
-
-function renderIncidentTab(incident) {
-  const cause = incident.top_cause;
-  switch (ui.tab) {
-    case 'summary': return `<div class="panel panel__body stack"><h2>What happened</h2><p class="text-lead">${escapeHtml(incident.summary)}</p>
-      <div class="notice"><b>Likely cause:</b> <span class="text-mono">${cause.cause_id}</span> · ranking ${cause.ranking.toFixed(2)} <span class="text-muted">(a ranking aid, not a probability)</span></div>
-      <div class="grid grid--columns"><div class="stack stack--tight"><h3>Affected</h3><div class="cluster">${incident.services.map(s => `<span class="tag">${s}</span>`).join('')}</div></div>
-      <div class="stack stack--tight"><h3>Not known yet</h3><ul class="list-plain">${cause.unknowns.map(u => `<li>${escapeHtml(u)}</li>`).join('') || '<li>Nothing outstanding.</li>'}</ul></div></div></div>
-      <div class="panel panel__body stack section-gap"><h2>Recent events</h2>${renderTimeline(incident.timeline.slice(-4))}</div>`;
-    case 'timeline': return `<div class="panel panel__body stack"><p class="text-muted">Ordered by event time (UTC). Suppressed events stay visible.</p>${renderTimeline(incident.timeline)}</div>`;
-    case 'evidence': return `<section class="panel"><div class="panel__header"><h2>Evidence</h2><span class="text-muted">${incident.evidence.length} items</span></div>
-      ${incident.evidence.map(e => `<div class="evidence-row" data-key="${e.key}"><span class="text-mono">${e.evidence_id}</span><span class="tag">${e.source}</span><span>${escapeHtml(e.summary)}</span><span>${e.key ? pill('accent', 'key') : ''}</span></div>`).join('')}</section>
-      ${incident.log_lines.length ? `<section class="panel panel__body stack section-gap"><div class="cluster cluster--between"><h2>Log lines</h2>${pill('warn', 'untrusted text')}</div>
-      ${can('view_logs') ? `<div class="log-view">${incident.log_lines.map(l => `<div class="log-view__line" data-level="${l.level}">${escapeHtml(l.text)}</div>`).join('')}</div>` : lockHint('view_logs', 'Raw logs need the Operator role or above.')}</section>` : ''}`;
-    case 'diagnosis': return `<section class="panel panel__body stack"><div class="cluster cluster--between"><h2 class="text-mono">#1 ${cause.cause_id}</h2>${pill('accent', 'candidate')}</div>
-      <progress class="ranking-bar" value="${Math.round(cause.ranking * 100)}" max="100" aria-label="ranking ${cause.ranking}"></progress>
-      <span class="text-muted">ranking ${cause.ranking.toFixed(2)} · orders hypotheses, not a probability</span>
-      <ul class="list-plain text-muted">${cause.basis.map(b => `<li>${b}</li>`).join('')}</ul>
-      <div class="grid grid--columns"><div class="stack stack--tight"><h3>Supporting</h3><ul class="claim-list">${cause.claims.map(c => `<li class="claim-list__item"><span class="tag">${c.claim_type}</span><span>${escapeHtml(c.text)}</span><a href="#" class="text-mono" data-action="select-tab" data-tab="evidence">${c.evidence_ids}</a></li>`).join('')}</ul></div>
-      <div class="stack stack--tight"><h3>Contradicting</h3>${cause.contradicting.length ? '' : '<p class="text-muted">None recorded. That is not proof there is none.</p>'}<h3>Alternatives</h3>
-      <ul class="claim-list">${cause.alternatives.map(a => `<li class="claim-list__item"><span class="tag">${a.ranking}</span><span><span class="text-mono">${a.cause_id}</span><br><span class="text-muted">${a.note}</span></span><span></span></li>`).join('') || '<li class="text-muted">None considered.</li>'}</ul></div></div>
-      <div class="cluster">${can('rerun_diagnosis') ? `<button class="button" data-action="rerun-diagnosis">${ui.rediagRunning ? 'Running…' : 'Re-run diagnosis'}</button>` : lockHint('rerun_diagnosis', 'Re-running a diagnosis needs the Operator role or above.')}</div></section>`;
-    case 'remediation': return `<div class="panel panel__body stack"><h2>Remediation</h2><p><b>Recommended:</b> <span class="text-mono">${incident.recommended_action.action_id}</span></p><p class="text-muted">${escapeHtml(incident.recommended_action.reason)}</p>
-      ${incident.plan ? factsList([['Command', `<span class="text-mono">${escapeHtml(incident.plan.command)}</span>`], ['Policy', `Layer 1 ${incident.plan.layer1}; Layer 2 ${incident.plan.layer2}`]]) : ''}</div>`;
-    case 'verification': return incident.verification
-      ? `<div class="panel panel__body stack"><div class="cluster"><h2>Verification</h2>${pill('ok', incident.verification.verdict)}</div><ul class="claim-list">${incident.verification.checks.map(c => `<li class="claim-list__item">${pill(c.passed ? 'ok' : 'bad', c.passed ? 'pass' : 'fail')}<span>${c.name}</span><span></span></li>`).join('')}</ul></div>`
-      : '<div class="panel panel__body text-muted">Verification starts after an action runs. Nothing to verify yet.</div>';
-    default: return `<div class="panel panel__body stack"><h2>Report</h2><p class="text-mono">${escapeHtml(`# ${incident.incident_id} ${incident.title}\nMode: deterministic · root cause confirmed: false\nLikely cause: ${cause.cause_id} (ranking ${cause.ranking})\nMitigated: ${incident.state === 'closed' ? 'yes' : 'no'}`).replace(/\n/g, '<br>')}</p><div class="cluster"><button class="button" data-action="copy-report">Copy as Markdown</button></div></div>`;
-  }
-}
-
-function renderIncidentDetail() {
-  const incident = incidents[ui.incidentId];
-  return `<p class="section-gap"><a href="#" data-action="open-view" data-view="incidents">${icon('back')} Incidents</a></p>
-  <div class="page-header"><div><span class="text-mono text-muted">${incident.incident_id} · opened ${incident.opened_at}</span><h1>${escapeHtml(incident.title)}</h1></div>${incidentStatePill(incident.state)}</div>${renderStepper(incident)}
-  <div class="layout-split"><div><div class="tabs" role="tablist">${incidentTabs.map(t => `<button class="tabs__tab" role="tab" data-action="select-tab" data-tab="${t}" aria-selected="${ui.tab === t}">${t[0].toUpperCase() + t.slice(1)}</button>`).join('')}</div>${renderIncidentTab(incident)}</div>
-  <aside class="rail">${renderDecisionCard(incident)}<section class="panel panel__body stack"><h3>Affected services</h3><div class="stack stack--tight">${incident.services.map(name => { const s = services.find(x => x.name === name); return `<button class="chip" data-action="open-service" data-service-name="${name}">${name}${healthPill(s.health_state)}</button>`; }).join('')}</div></section></aside></div>`;
-}
-
-function renderAccessDenied(title, who) {
-  return `<div class="page-header"><h1>${title}</h1></div><div class="panel panel__body stack"><h2>You don't have access</h2><p class="text-muted">${who} Ask an admin for the role, or switch role from the menu at the top right (prototype only).</p></div>`;
-}
+const renderAccessDenied = (title, who) => `<div class="page"><div class="page-header"><h1>${title}</h1></div><div class="panel panel__body stack"><h2>You don't have access</h2><p class="text-muted">${who} Ask an admin for the role, or switch role from the avatar menu (prototype only).</p></div></div>`;
 function renderAudit() {
   if (!can('view_audit')) return renderAccessDenied('Audit log', 'Admins only.');
-  return `<div class="page-header"><div><h1>Audit log</h1><p class="page-header__lead">Every detection, decision and action, chained by hash so tampering is visible.</p></div><div class="cluster">${pill('ok', 'chain valid')}<span class="text-muted">${auditEvents.length} events</span></div></div>
-  <section class="panel scroll-x"><table class="matrix matrix--wide"><thead><tr><th>Time</th><th>Actor</th><th>Event</th><th>Incident</th><th>Hash</th></tr></thead><tbody>${auditEvents.map(a => `<tr><td class="text-mono">${a.time}</td><td>${a.actor}</td><td>${a.event_type}</td><td class="text-mono">${a.incident_id}</td><td class="text-mono text-muted">${a.hash}</td></tr>`).join('')}</tbody></table></section>`;
+  return `<div class="page"><div class="page-header"><div><h1>Audit log</h1><p class="page-header__lead">Every detection, decision and action, chained by hash so tampering is visible.</p></div><div class="cluster">${pill('ok', 'chain valid')}<span class="text-muted">${auditEvents.length} events</span></div></div>
+  <section class="panel scroll-x"><table class="matrix matrix--wide"><thead><tr><th>Time</th><th>Actor</th><th>Event</th><th>Incident</th><th>Hash</th></tr></thead><tbody>${auditEvents.map(a => `<tr><td class="text-mono">${a.time}</td><td>${a.actor}</td><td>${a.event_type}</td><td class="text-mono">${a.incident_id}</td><td class="text-mono text-muted">${a.hash}</td></tr>`).join('')}</tbody></table></section></div>`;
 }
 function renderAccess() {
   if (!can('manage_access')) return renderAccessDenied('Access', 'Only admins manage roles.');
   const current = effectiveRoleId();
-  return `<div class="page-header"><div><h1>Access</h1><p class="page-header__lead">Roles decide what each person can see and do. Hidden or locked controls always say why.</p></div></div>
-  <section class="panel scroll-x"><table class="matrix"><thead><tr><th>Permission</th>${Object.entries(roles).map(([id, r]) => `<th data-current="${id === current}">${r.label}</th>`).join('')}</tr></thead>
+  return `<div class="page"><div class="page-header"><div><h1>Access</h1><p class="page-header__lead">Roles decide what each person can see and do. Locked controls always say why.</p></div></div>
+  <section class="panel scroll-x section-gap"><table class="matrix"><thead><tr><th>Permission</th>${Object.entries(roles).map(([id, r]) => `<th data-current="${id === current}">${r.label}</th>`).join('')}</tr></thead>
   <tbody>${permissionLabels.map(([permission, label]) => `<tr><td>${label}</td>${Object.entries(roles).map(([id, r]) => `<td data-current="${id === current}">${r.permissions.includes(permission) ? '<span class="matrix__yes">✓</span>' : '<span class="matrix__no">—</span>'}</td>`).join('')}</tr>`).join('')}</tbody></table></section>
   <div class="grid grid--halves"><section class="panel panel__body stack"><h2>Environment access mode</h2><p class="text-muted">Set by the deployment, not by users.</p>
     ${factsList([['rbac', 'Sign in, roles apply. Default for any real environment.'], ['open', 'No sign-in. Everyone acts as Super Admin. For testing and demos only.']])}
     <div class="cluster"><button class="button ${ui.envMode === 'rbac' ? 'button--primary' : ''}" data-action="set-env" data-env-mode="rbac">rbac</button><button class="button ${ui.envMode === 'open' ? 'button--primary' : ''}" data-action="set-env" data-env-mode="open">open (test)</button></div></section>
-  <section class="panel panel__body stack"><h2>Safety rules</h2><ul class="list-plain"><li>Open mode shows a banner on every page.</li><li>Open mode is refused when the API listens on a non-local address, unless explicitly overridden.</li><li>Every decision is logged with the actor, including <span class="text-mono">open-mode</span>.</li></ul></section></div>`;
+  <section class="panel panel__body stack"><h2>Safety rules</h2><ul class="list-plain"><li>Open mode shows a banner on every page.</li><li>Open mode is refused when the API listens on a non-local address, unless explicitly overridden.</li><li>Every decision is logged with the actor, including <span class="text-mono">open-mode</span>.</li></ul></section></div></div>`;
 }
 
 /* ---------- shell ---------- */
-function renderShell(body) {
-  const openCount = Object.values(incidents).filter(i => i.state !== 'closed').length, role = roles[effectiveRoleId()];
-  const navItems = [['overview','Overview'],['topology','Topology'],['incidents','Incidents'],['audit','Audit'],['access','Access']];
+function renderSidebar() {
+  const openCount = openIncidents().length, sectionIds = ['section-evidence','section-remediation','section-report'];
+  const items = [['overview','home','Overview','open-view'],['topology','topology','Topology','open-view'],['incidents','alert','Incidents','open-view'],['observability','bars','Observability','open-view'],
+    ['section-evidence','search','Investigation','open-section'],['section-remediation','bolt','Remediation','open-section'],['section-report','file','Reports','open-section'],['audit','clipboard','Audit','open-view'],['access','users','Access','open-view']];
   const locked = id => (id === 'audit' && !can('view_audit')) || (id === 'access' && !can('manage_access'));
-  return `<header class="topbar"><div class="container topbar__inner"><span class="brand"><span class="brand__mark"></span>Cloud Doctor</span>
-  <nav class="main-nav" aria-label="Main">${navItems.map(([id, label]) => `<button class="main-nav__item" data-action="open-view" data-view="${id}" ${(ui.view === id || (ui.view === 'incident' && id === 'incidents')) ? 'aria-current="page"' : ''}>${label}${id === 'incidents' ? `<span class="main-nav__badge">${openCount}</span>` : ''}${locked(id) ? icon('lock') : ''}</button>`).join('')}</nav>
-  <div class="topbar__tools"><span class="chip chip--static" title="Live event stream"><span class="live-dot"></span>Live</span><button class="chip" data-action="toggle-theme" aria-label="Toggle theme">${icon('contrast')} Theme</button>
-  <div class="popover-anchor"><button class="chip" data-action="toggle-menu" aria-haspopup="true" aria-expanded="${ui.menuOpen}">${ui.envMode === 'open' ? pill('warn', 'OPEN', 'pill--compact') : icon('user')} ${ui.envMode === 'open' ? 'Super Admin' : role.label} ${icon('chevron')}</button>
-  ${ui.menuOpen ? `<div class="popover" role="menu"><div class="popover__title">Prototype: simulate who is signed in</div>${Object.entries(roles).map(([id, r]) => `<button class="popover__option" role="menuitemradio" aria-checked="${ui.roleId === id && ui.envMode === 'rbac'}" data-action="set-role" data-role-id="${id}"><span><b>${r.label}</b><span class="popover__hint">${r.description}</span></span></button>`).join('')}<hr class="popover__divider">
-    <button class="popover__option" role="menuitemradio" aria-checked="${ui.envMode === 'open'}" data-action="set-env" data-env-mode="${ui.envMode === 'open' ? 'rbac' : 'open'}"><span><b>Open test mode</b><span class="popover__hint">Environment role = open: everyone is Super Admin</span></span></button></div>` : ''}</div></div></div></header>
-  ${ui.envMode === 'open' ? `<div class="mode-banner"><div class="container mode-banner__inner"><b>Open test mode.</b> No sign-in; every visitor has Super Admin rights. Do not expose this environment.<a href="#" data-action="set-env" data-env-mode="rbac">Switch to role-based access</a></div></div>` : ''}
-  <div class="container"><main class="page">${body}</main></div>`;
+  const current = id => sectionIds.includes(id) ? ui.sectionFocus === id : (ui.view === id || (ui.view === 'incident' && id === 'incidents' && !ui.sectionFocus));
+  return `<aside class="sidebar"><div class="brand"><span class="brand__mark">${icon('pulse')}</span><span><span class="brand__name">Cloud Doctor</span><span class="brand__tagline">SRE Incident Command Center</span></span></div>
+  <nav class="sidebar__nav" aria-label="Main">${items.map(([id, iconName, label, action]) => `<button class="sidebar__item" data-action="${action}" ${action === 'open-view' ? `data-view="${id}"` : `data-section="${id}"`} ${current(id) ? 'aria-current="page"' : ''}>${icon(iconName)}<span class="sidebar__label">${label}</span>${id === 'incidents' && openCount ? `<span class="sidebar__badge">${openCount}</span>` : ''}${locked(id) ? icon('lock') : ''}</button>`).join('')}</nav>
+  <div class="sidebar__status"><span class="sidebar__status-line"><span class="status-dot" data-tone="${openCount ? 'warn' : 'ok'}"></span>${openCount ? 'Incidents open' : 'System healthy'}</span><span class="text-muted">Core platform operational</span><br><span class="text-faint text-small">v1.0.0 (Sandbox)</span></div></aside>`;
+}
+function renderTopbar() {
+  const role = roles[effectiveRoleId()], open = openIncidents();
+  return `<header class="topbar"><span class="topbar__label">Environment:</span><span class="chip chip--static">${icon('cube')}Sandbox</span><span class="chip chip--live chip--static"><span class="live-dot"></span>Live</span><span class="topbar__spacer"></span>
+  <div class="popover-anchor"><button class="chip" data-action="toggle-popover" data-popover="range" aria-haspopup="true" aria-expanded="${ui.popover === 'range'}">${icon('calendar')}${ui.timeRange}${icon('chevron')}</button>
+    ${ui.popover === 'range' ? `<div class="popover popover--narrow" role="menu">${timeRanges.map(r => `<button class="popover__option" role="menuitemradio" aria-checked="${ui.timeRange === r}" data-action="set-range" data-range="${r}">${r}</button>`).join('')}</div>` : ''}</div>
+  <label class="search" for="global-search">${icon('search')}<input class="search__input" id="global-search" type="search" placeholder="Search incidents, services, evidence…" autocomplete="off"><span class="search__hint">Ctrl K</span></label>
+  <div class="popover-anchor"><button class="icon-button" data-action="toggle-popover" data-popover="bell" aria-label="Notifications" aria-haspopup="true">${icon('bell')}${open.length ? `<span class="icon-button__count">${open.length}</span>` : ''}</button>
+    ${ui.popover === 'bell' ? `<div class="popover" role="menu"><div class="popover__title">Open incidents</div>${open.map(i => `<button class="popover__option" data-action="open-incident" data-incident-id="${i.incident_id}"><span><b>${i.incident_id}</b> ${escapeHtml(i.title)}<span class="popover__hint">${stateLabel[i.state]} · ${severityLabel[i.severity]}</span></span></button>`).join('') || '<div class="popover__title">Nothing open.</div>'}</div>` : ''}</div>
+  <button class="icon-button" data-action="toggle-theme" aria-label="Toggle theme">${icon('contrast')}</button>
+  <div class="popover-anchor"><button class="chip" data-action="toggle-popover" data-popover="account" aria-haspopup="true" aria-expanded="${ui.popover === 'account'}"><span class="avatar">HC</span>${ui.envMode === 'open' ? pill('warn', 'OPEN', 'pill--plain') : `<span class="text-muted text-small">${role.label}</span>`}${icon('chevron')}</button>
+  ${ui.popover === 'account' ? `<div class="popover" role="menu"><div class="popover__title">Prototype: simulate who is signed in</div>${Object.entries(roles).map(([id, r]) => `<button class="popover__option" role="menuitemradio" aria-checked="${ui.roleId === id && ui.envMode === 'rbac'}" data-action="set-role" data-role-id="${id}"><span><b>${r.label}</b><span class="popover__hint">${r.description}</span></span></button>`).join('')}<hr class="popover__divider">
+    <button class="popover__option" role="menuitemradio" aria-checked="${ui.envMode === 'open'}" data-action="set-env" data-env-mode="${ui.envMode === 'open' ? 'rbac' : 'open'}"><span><b>Open test mode</b><span class="popover__hint">Environment role = open: everyone is Super Admin</span></span></button></div>` : ''}</div></header>
+  ${ui.envMode === 'open' ? `<div class="mode-banner"><div class="mode-banner__inner"><b>Open test mode.</b> No sign-in; every visitor has Super Admin rights. Do not expose this environment.<a href="#" data-action="set-env" data-env-mode="rbac">Switch to role-based access</a></div></div>` : ''}`;
 }
 function render() {
-  const views = {overview: renderOverview, topology: renderTopology, incidents: renderIncidentList, incident: renderIncidentDetail, audit: renderAudit, access: renderAccess};
-  document.getElementById('app').innerHTML = renderShell(views[ui.view]());
+  const views = {overview: () => renderCommandCenter(activeIncident()), incident: () => renderCommandCenter(incidents[ui.incidentId]), topology: renderTopologyPage, incidents: renderIncidentList, observability: renderObservability, audit: renderAudit, access: renderAccess};
+  document.getElementById('app').innerHTML = `<div class="app-shell">${renderSidebar()}<div class="app-main">${renderTopbar()}${views[ui.view]()}</div></div>`;
+  if (ui.focus) { const target = document.getElementById(ui.focus); if (target) target.scrollIntoView({block: 'start'}); ui.focus = null; }
 }
 
 /* ---------- actions: one handler per data-action value (kebab-case) ---------- */
 const actions = {
-  'toggle-menu': () => { ui.menuOpen = !ui.menuOpen; },
-  'set-role': d => { ui.roleId = d.roleId; ui.envMode = 'rbac'; ui.menuOpen = false; showToast('Signed in as ' + roles[d.roleId].label + ' (simulated)'); },
-  'set-env': d => { ui.envMode = d.envMode; ui.menuOpen = false; showToast(d.envMode === 'open' ? 'Open test mode on: everyone is Super Admin' : 'Role-based access restored'); },
+  'toggle-popover': d => { ui.popover = ui.popover === d.popover ? null : d.popover; },
+  'set-range': d => { ui.timeRange = d.range; ui.popover = null; showToast('Range set to ' + d.range + ' (sample data does not change)'); },
+  'set-role': d => { ui.roleId = d.roleId; ui.envMode = 'rbac'; ui.popover = null; showToast('Signed in as ' + roles[d.roleId].label + ' (simulated)'); },
+  'set-env': d => { ui.envMode = d.envMode; ui.popover = null; showToast(d.envMode === 'open' ? 'Open test mode on: everyone is Super Admin' : 'Role-based access restored'); },
   'toggle-theme': () => { const root = document.documentElement; root.setAttribute('data-theme', getComputedStyle(root).colorScheme.includes('dark') ? 'light' : 'dark'); },
-  'open-view': d => { ui.view = d.view; ui.menuOpen = false; },
-  'open-incident': d => { ui.view = 'incident'; ui.incidentId = d.incidentId; ui.tab = 'summary'; ui.pendingDecision = null; ui.menuOpen = false; },
-  'open-service': d => { ui.view = 'topology'; ui.nodeName = d.serviceName; },
+  'open-view': d => { ui.view = d.view; ui.sectionFocus = null; ui.popover = null; window.scrollTo(0, 0); },
+  'open-section': d => { if (ui.view !== 'incident') { ui.view = 'incident'; ui.incidentId = (activeIncident() || Object.values(incidents)[0]).incident_id; } ui.sectionFocus = d.section; ui.focus = d.section; ui.popover = null; },
+  'open-incident': d => { ui.view = 'incident'; ui.incidentId = d.incidentId; ui.sectionFocus = null; ui.pendingDecision = null; ui.popover = null; window.scrollTo(0, 0); },
+  'open-service': d => { ui.view = 'topology'; ui.nodeName = d.serviceName; ui.sectionFocus = null; window.scrollTo(0, 0); },
+  'open-commander': () => { ui.focus = 'commander'; },
   'select-node': d => { ui.nodeName = d.serviceName; },
-  'select-tab': d => { ui.tab = d.tab; },
+  'select-evidence-tab': d => { ui.evidenceTab = d.evidenceTab; },
+  'select-commander-tab': d => { ui.commanderTab = d.commanderTab; ui.focus = 'commander'; },
+  'select-option': d => { ui.selectedOptions[currentIncident().incident_id] = d.optionId; ui.pendingDecision = null; },
   'set-filter': d => { ui.filter = d.filter; },
+  'show-evidence': d => { const item = currentIncident().evidence.find(e => e.evidence_id === d.evidenceId); showToast(d.evidenceId + (item ? ' · ' + item.source + ' · ' + item.summary : ' · not collected for this incident')); },
   'start-decision': d => { ui.pendingDecision = d.decision; },
   'cancel-decision': () => { ui.pendingDecision = null; },
   'submit-decision': d => {
-    const reason = (document.getElementById('decision-reason') || {}).value || '';
-    ui.decisions[ui.incidentId] = (d.decision === 'approve' ? 'Approved' : 'Rejected') + ' by you just now' + (reason ? ': ' + reason : '');
+    const id = currentIncident().incident_id, reason = (document.getElementById('decision-reason') || {}).value || '';
+    ui.decisions[id] = (d.decision === 'approve' ? 'Approved' : 'Rejected') + ' by you just now' + (reason ? ': ' + reason : '');
     ui.pendingDecision = null;
     showToast('Plan ' + (d.decision === 'approve' ? 'approved. The actuator will run it and verification follows.' : 'rejected. The incident stays open.'));
   },
-  'rerun-diagnosis': () => { ui.rediagRunning = true; render(); setTimeout(() => { ui.rediagRunning = false; showToast('Diagnosis re-run: same top cause, ranking unchanged'); render(); }, 1200); return false; },
-  'take-ownership': () => showToast('You now own ' + ui.incidentId + ' (logged in the audit trail)'),
-  'copy-report': () => { try { navigator.clipboard.writeText('# ' + ui.incidentId).then(() => showToast('Copied'), () => showToast('Copy blocked: select the text instead')); } catch (_) { showToast('Copy blocked: select the text instead'); } },
+  'take-ownership': () => { ui.owners[currentIncident().incident_id] = 'you'; showToast('You now own ' + currentIncident().incident_id + ' (logged in the audit trail)'); },
+  'copy-report': () => { try { navigator.clipboard.writeText('# ' + currentIncident().incident_id).then(() => showToast('Copied'), () => showToast('Copy blocked: select the text instead')); } catch (_) { showToast('Copy blocked: select the text instead'); } },
 };
 document.addEventListener('click', event => {
   const target = event.target.closest('[data-action]');
-  if (!target) { if (ui.menuOpen) { ui.menuOpen = false; render(); } return; }
+  if (!target) { if (ui.popover) { ui.popover = null; render(); } return; }
   if (target.tagName === 'A') event.preventDefault();
-  if (actions[target.dataset.action](target.dataset) === false) return;
+  actions[target.dataset.action](target.dataset);
   render();
 });
 document.addEventListener('keydown', event => {
-  if (event.key === 'Escape' && ui.menuOpen) { ui.menuOpen = false; render(); }
-  const node = event.target.closest && event.target.closest('[data-action="select-node"]');
-  if (node && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); ui.nodeName = node.dataset.serviceName; render(); }
+  if (event.key === 'Escape' && ui.popover) { ui.popover = null; render(); }
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); const input = document.getElementById('global-search'); if (input) input.focus(); return; }
+  const node = event.target.closest && event.target.closest('g[data-action]');
+  if (node && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); actions[node.dataset.action](node.dataset); render(); return; }
+  if (event.target.id === 'global-search' && event.key === 'Enter') {
+    const query = event.target.value.trim().toLowerCase(); if (!query) return;
+    const hit = Object.values(incidents).find(i => (i.incident_id + ' ' + i.title + ' ' + i.services.join(' ') + ' ' + i.top_cause.cause_id).toLowerCase().includes(query));
+    if (hit) { actions['open-incident']({incidentId: hit.incident_id}); render(); return; }
+    const service = services.find(s => s.name.includes(query));
+    if (service) { actions['open-service']({serviceName: service.name}); render(); return; }
+    showToast('No incident or service matches "' + query + '"');
+  }
 });
+ui.incidentId = (activeIncident() || {incident_id: 'INC-0003'}).incident_id;
 render();
 </script>
