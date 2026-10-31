@@ -41,3 +41,7 @@ Coordinator draft. Stream branches are **not merged** until the user decides. Ev
 - **Rego:** `opa check` exit 0 and `opa test` 13/13 on OPA 1.22.0.
 - **Verification on this branch:** contracts PASS; backend 146, invariants 129, actuator 83, policy 108, harness 134, frontend 132 (typecheck clean); combined single-process pytest 585 passed, 19 skipped, 0 failed.
 - **Still open (needs a decision or a run):** the 10 contract change requests; the real-package/stub difference for a plan whose declared risk is below the catalogue's (real: approval required, stub: deny); PostgreSQL 18 for the backend; frontend build and e2e; the Postgres audit sink; cross-stream runs against the real sandbox (G2/G3).
+
+### Contract change requests applied on `integration` (2026-10-31)
+Applied: policy-1, frontend-1, frontend-2, harness-2 (`contracts/cause_ids.md`), harness-3 (`contracts/audit_events.md`), backend-1 (`cd_queue_length` in the probe sidecar and `contracts/telemetry.md`). No change needed: harness-1. **Deferred, with reasons in each request file:** policy-2 (envelope attestations), frontend-3 (new endpoints), harness-4 (new collectors and RCA rules), and the backend's own use of `cd_queue_length` (its detector still reads `queue_depth`).
+Re-verified after the changes: contracts PASS; backend 146 (stub) and 131 + 19 skipped (real package); invariants 129; actuator 83; policy 108; harness 134; combined run 585 passed, 19 skipped, 0 failed; frontend `check:api` ok, 132 tests, `next build` compiles; `make smoke` PASS with 18 checks.
