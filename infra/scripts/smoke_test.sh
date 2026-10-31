@@ -29,7 +29,7 @@ EOF
 v=$(q 'cd_queue_length{service="redis",queue="jobs"}'); python3 - "$v" <<'EOF' && ok "probe cd_queue_length present and small ($v)" || bad "probe cd_queue_length = $v"
 import sys; v=sys.argv[1]; sys.exit(0 if v!="NONE" and float(v)<50 else 1)
 EOF
-for m in process_start_time_seconds build_info cd_dependency_up; do
+for m in process_start_time_seconds build_info cd_dependency_up process_cpu_seconds_total process_resident_memory_bytes db_call_duration_seconds_count cd_fs_used_bytes cd_db_connections cd_db_max_connections cd_db_probe_duration_seconds; do
   v=$(q "count($m)"); [[ "$v" != NONE ]] && ok "metric $m present" || bad "metric $m missing"
 done
 
