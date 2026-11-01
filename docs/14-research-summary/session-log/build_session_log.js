@@ -84,7 +84,13 @@ data.entries.forEach((e) => {
   }
 });
 
-children.push(new Paragraph({ heading: HeadingLevel.HEADING_1, children: [run(`Current status (${data.status.asof})`, { bold: true, size: 30 })], pageBreakBefore: true, spacing: { after: 120 } }));
+(data.external || []).forEach((x) => {
+  children.push(new Paragraph({ heading: HeadingLevel.HEADING_1, children: [run('Work done outside this session', { bold: true, size: 30 })], pageBreakBefore: true, spacing: { after: 60 } }));
+  children.push(para([run(`${x.date}. ${x.source}`, { size: 19, color: MUTED, italics: true })]));
+  x.items.forEach((t) => children.push(bullet(t)));
+});
+
+children.push(new Paragraph({ heading: HeadingLevel.HEADING_1, children: [run(`Current status (${data.status.asof})`, { bold: true, size: 30 })], pageBreakBefore: !(data.external && data.external.length), spacing: { after: 120 } }));
 children.push(label('Branches'));
 data.status.branches.forEach((t) => children.push(bullet(t)));
 children.push(label('Open items and next steps'));
