@@ -11,11 +11,31 @@
     "Results are stated as measured. Anything not run is marked as not verified."
   ],
   "phases": [
-    {"name": "Before this session", "seq": "0", "note": "Research phase, from the hand-off summary (not verbatim)."},
-    {"name": "Coordination and sync", "seq": "1-7", "note": "Verify streams, sync branches, review the four stream sessions."},
-    {"name": "Merge preparation", "seq": "8-11", "note": "Merge order, commit authorship fix, integration branch and its fixes."},
-    {"name": "Contract changes and harness-4", "seq": "12-14", "note": "Apply required change requests, implement harness-4, map backend to frontend."},
-    {"name": "Hand-off and documentation", "seq": "15-16", "note": "Stop cloud spend, hand off to laptop, create this log."}
+    {
+      "name": "Before this session",
+      "seq": "0",
+      "note": "Research phase, from the hand-off summary (not verbatim)."
+    },
+    {
+      "name": "Coordination and sync",
+      "seq": "1-7",
+      "note": "Verify streams, sync branches, review the four stream sessions."
+    },
+    {
+      "name": "Merge preparation",
+      "seq": "8-11",
+      "note": "Merge order, commit authorship fix, integration branch and its fixes."
+    },
+    {
+      "name": "Contract changes and harness-4",
+      "seq": "12-14",
+      "note": "Apply required change requests, implement harness-4, map backend to frontend."
+    },
+    {
+      "name": "Hand-off and documentation",
+      "seq": "15-16",
+      "note": "Stop cloud spend, hand off to laptop, create this log."
+    }
   ],
   "entries": [
     {
@@ -28,7 +48,11 @@
         "Locked in the core principle: deterministic systems own detection, policy, execution and verification; AI only advises.",
         "Later work (before this session) froze the contracts (schemas, OpenAPI, database schema, telemetry contract), wrote ADRs, and built Stream A (plain-Docker sandbox) on branch stream/infra. Four cloud stream sessions (backend, policy, frontend, harness) were started."
       ],
-      "artifacts": ["docs/00-overview/ (research plan and map)", "contracts/", "branch stream/infra"]
+      "artifacts": [
+        "docs/00-overview/ (research plan and map)",
+        "contracts/",
+        "branch stream/infra"
+      ]
     },
     {
       "seq": 1,
@@ -43,7 +67,12 @@
         "Added tests/integration/gate_g1.sh and a draft integration plan (gates G2-G5 marked pending).",
         "Push failed with HTTP 403 (GitHub access missing); reported with the fix. A stop-hook reminder about unpushed commits arrived (automated); the retry failed the same way."
       ],
-      "artifacts": ["infra/tools/fault_worker.py", "tests/integration/gate_g1.sh", "docs/14-research-summary/integration-plan.md", "docs/dev/infra/STATUS.md"]
+      "artifacts": [
+        "infra/tools/fault_worker.py",
+        "tests/integration/gate_g1.sh",
+        "docs/14-research-summary/integration-plan.md",
+        "docs/dev/infra/STATUS.md"
+      ]
     },
     {
       "seq": 2,
@@ -54,7 +83,9 @@
         "Push to stream/infra-p7f2rn succeeded; the branch was created on the remote with all commits.",
         "Noted that sprint-status.md on main was still stale and needed the user's go-ahead to update on main."
       ],
-      "artifacts": ["branch stream/infra-p7f2rn pushed"]
+      "artifacts": [
+        "branch stream/infra-p7f2rn pushed"
+      ]
     },
     {
       "seq": 3,
@@ -77,7 +108,9 @@
         "Confirmed the backend worker_crash fixture models queue_depth rising while the worker is dead, which contradicts the sandbox observation; recorded it as a mismatch to resolve before G2.",
         "Tore down the sandbox, committed and pushed the note. Gave the laptop sync steps."
       ],
-      "artifacts": ["docs/14-research-summary/integration-plan.md (check log)"]
+      "artifacts": [
+        "docs/14-research-summary/integration-plan.md (check log)"
+      ]
     },
     {
       "seq": 5,
@@ -102,7 +135,9 @@
         "Found that the Rego policy had never been executed, the Postgres audit sink was not started, and the harness had gaps (EXP-05, 11, 12 injection missing).",
         "Collected the 10 contract change requests the streams filed. Wrote the review document with a table of all of this."
       ],
-      "artifacts": ["docs/14-research-summary/stream-review-2026-10-31.md"]
+      "artifacts": [
+        "docs/14-research-summary/stream-review-2026-10-31.md"
+      ]
     },
     {
       "seq": 7,
@@ -151,7 +186,9 @@
         "Force-pushed with a lease pinned to the old heads. main and stream/infra were untouched (already the user's).",
         "Warned that the stream sessions still hold the old commits and should not push again without a reset."
       ],
-      "artifacts": ["new heads: infra-p7f2rn 5462d6f, backend 01fefb0, policy faad7e5, frontend 956f6d1, harness 3baaa72"]
+      "artifacts": [
+        "new heads: infra-p7f2rn 5462d6f, backend 01fefb0, policy faad7e5, frontend 956f6d1, harness 3baaa72"
+      ]
     },
     {
       "seq": 11,
@@ -166,7 +203,13 @@
         "Ran the Rego for the first time through the official OPA image (the vendor host is blocked): opa check exit 0, opa test 13/13 on OPA 1.22.0.",
         "Verification: contracts pass; backend 146 (stub) and 131 (real, 19 skipped); invariants 129; actuator 83; policy 108; harness 134; frontend 132; combined run 585 passed, 0 failed. Pushed the integration branch."
       ],
-      "artifacts": ["branch integration", "backend/policy_adapter.py", "backend/domain/catalog.py", "tests/actuator/test_act_server.py", "docs/dev/policy/STATUS.md"]
+      "artifacts": [
+        "branch integration",
+        "backend/policy_adapter.py",
+        "backend/domain/catalog.py",
+        "tests/actuator/test_act_server.py",
+        "docs/dev/policy/STATUS.md"
+      ]
     },
     {
       "seq": 12,
@@ -179,7 +222,12 @@
         "Deferred with reasons recorded in each request: policy-2 (envelope attestations), frontend-3 (new endpoints), harness-4 (new collectors), and the backend's own use of the new queue metric. harness-1 needed no change.",
         "Re-verified everything and pushed; asked whether to fast-forward main (not done)."
       ],
-      "artifacts": ["contracts/cause_ids.md", "contracts/audit_events.md", "contracts/telemetry.md", "docs/dev/contract-change-requests/ (resolutions)"]
+      "artifacts": [
+        "contracts/cause_ids.md",
+        "contracts/audit_events.md",
+        "contracts/telemetry.md",
+        "docs/dev/contract-change-requests/ (resolutions)"
+      ]
     },
     {
       "seq": 13,
@@ -204,7 +252,12 @@
         "Backend to frontend: wrote a live conformance check. Against the real backend and live sandbox: all 20 frontend calls exist in the contract, authentication and the idempotency rule are enforced, every endpoint that needs no incident validated against the schemas (0 failed). Seven incident-scoped operations were not exercised because holding 96 of 100 connections did not cause an incident (correct: the application kept working).",
         "Work was interrupted by the user before the frontend was run against the real backend."
       ],
-      "artifacts": ["tests/integration/live_contract_check.py", "infra/sim/app/probes.py", "backend/rca/engine.py", "experiments/scenarios/"]
+      "artifacts": [
+        "tests/integration/live_contract_check.py",
+        "infra/sim/app/probes.py",
+        "backend/rca/engine.py",
+        "experiments/scenarios/"
+      ]
     },
     {
       "seq": 15,
@@ -217,7 +270,10 @@
         "Added a hand-off section to the integration plan: what is verified, what is not (refusal flag never run, incident-scoped calls and the frontend against the real backend not exercised, new RCA rules only on synthetic data), what is open, and the exact next steps.",
         "Noted that most cost came from repeated sandbox rebuilds and long test loops in the cloud container, and that running the unverified steps locally avoids the proxy and rate-limit problems."
       ],
-      "artifacts": ["branch integration at d105ba0", "docs/14-research-summary/integration-plan.md (hand-off section)"]
+      "artifacts": [
+        "branch integration at d105ba0",
+        "docs/14-research-summary/integration-plan.md (hand-off section)"
+      ]
     },
     {
       "seq": 16,
@@ -228,22 +284,41 @@
         "Created this document from a data file and a generator script, so every later update is: add an entry, rebuild, commit.",
         "The document will be updated at the end of each turn. Because I cannot update it in the background between turns, the update happens as part of answering each prompt."
       ],
-      "artifacts": ["docs/14-research-summary/Cloud-Doctor-Session-Log.docx", "docs/14-research-summary/session-log/session-log.json", "docs/14-research-summary/session-log/build_session_log.js"]
+      "artifacts": [
+        "docs/14-research-summary/Cloud-Doctor-Session-Log.docx",
+        "docs/14-research-summary/session-log/session-log.json",
+        "docs/14-research-summary/session-log/build_session_log.js"
+      ]
     }
   ],
   "status": {
     "asof": "after entry 16",
     "branches": [
-      "main: ee4aaa6, unchanged; integration can be fast-forwarded into it with no merge commit (needs the user's decision).",
-      "integration: all streams merged plus fixes, contract changes and harness-4 (pushed).",
+      "main: ee4aaa6, unchanged; the integration branch can be fast-forwarded into it only after review (needs the user's decision).",
+      "integration: all streams merged, plus fixes, contract changes, harness-4, laptop-session work and this log (pushed).",
       "stream/*: pushed, authored as the user."
     ],
     "open": [
-      "Run on the laptop: rebuild the sandbox and check the new refusal flag; start the backend against the sandbox, create a real incident and re-run the live check so the seven incident-scoped operations are exercised.",
-      "Run the frontend against the real backend (not the mock).",
-      "Not yet done: policy-2 (envelope attestations), frontend-3 (new endpoints), backend using the new queue metric for worker-crash detection, harness injection for EXP-05/11/12, PostgreSQL 18 for the backend, the Postgres audit sink.",
+      "Open findings from the laptop run: one fault creates two incidents (api and worker) because the shared database is not in the affected set; the sandbox apps log only a generic error, so the 'too many clients' log signature can never fire on this stack; connection-count thresholds rest on one real run.",
+      "Not yet run on real telemetry: the network-latency and disk rules (need harness injection for those faults).",
+      "Frontend: evidence, remediation, verification and report tabs, audit page and approve/reject were not clicked through against the real backend.",
+      "Not yet done: policy-2 (envelope attestations), frontend-3 (new endpoints), backend using the queue-length metric for worker-crash detection, harness injection for EXP-05/11/12, PostgreSQL 18 for the backend, the Postgres audit sink.",
       "Decide on merging integration into main; update sprint-status on main.",
       "AI stream (last): not started; nothing depends on it."
     ]
-  }
+  },
+  "external": [
+    {
+      "date": "2026-11-01 (laptop session)",
+      "source": "Read from the repository (integration-plan.md and commit messages), not observed by this session.",
+      "items": [
+        "Hand-off steps 1 to 3 were run locally. Sandbox rebuilt and make smoke passed (25 checks). The refusal flag cd_db_connection_refused is exported.",
+        "A real bug in the refusal probe was found by holding all 100 connections as the postgres superuser: the database error carries no error code, so the 'too many clients' branch never fired. Fixed by matching the server message (commit 68754ec).",
+        "Incident-scoped API operations were exercised with a real incident: live contract check 0 failed, 0 not exercised. Two incidents opened for one fault (api and worker), which is a new open finding.",
+        "The RCA cited a stale low connection count as a contradiction while the probe was refused; fixed in the RCA with a regression test (commit a324e39). Live confidence 0.27 to 0.44.",
+        "Frontend run against the real backend for the main flow (login, overview with live state, live updates connected, incident timeline and diagnosis, no console errors). Evidence, remediation, verification, report tabs, audit page and approve/reject were not clicked through. nginx itself was not exercised.",
+        "Further commits added a normalisation layer and naming standard in the backend, UX documents, and an incident workspace in the frontend (11 commits in all on the integration branch)."
+      ]
+    }
+  ]
 }
